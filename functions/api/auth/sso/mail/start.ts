@@ -1,24 +1,26 @@
-import { ApiError, handleApi, jsonResponse } from "../../../../_shared/responses";
+import { ApiError, handleApi, jsonResponse, readJson } from "../../../../_shared/responses";
+import { mailSsoTurnstileAction, verifyTurnstileToken } from "../../../../_shared/turnstile";
 import type { Env } from "../../../../_shared/types";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
-    const startUrl = env.MAIL_SYSTEM_SSO_URL;
-    if (!startUrl) {
+    const requestUrl = new URL(request.url);
+    if (!env.MAIL_SYSTEM_SSO_URL) {
       const url = new URL(request.url);
       url.pathname = "/login";
       url.search = "?sso=mail_not_configured";
       return Response.redirect(url.toString(), 302);
     }
 
-    const requestUrl = new URL(request.url);
-    const redirectUri = new URL("/api/auth/sso/mail/callback", requestUrl.origin);
-    const destination = new URL(startUrl);
-    destination.searchParams.set("client_id", "chemvault_user");
-    destination.searchParams.set("redirect_uri", redirectUri.toString());
-    destination.searchParams.set("return_to", sanitizeReturnTo(requestUrl.searchParams.get("returnTo")));
+    await verifyTurnstileToken({
+      env,
+      request,
+      token: requestUrl.searchParams.get("turnstileToken"),
+      action: mailSsoTurnstileAction,
+      missingTokenMessage: "Complete the Cloudflare verification before continuing with ChemVault Mail.",
+    });
 
-    return Response.redirect(destination.toString(), 302);
+    return Response.redirect(buildMailSsoDestination(env, request, requestUrl.searchParams.get("returnTo")).toString(), 302);
   });
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
@@ -26,10 +28,31 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
     if (!env.MAIL_SYSTEM_SSO_URL) {
       throw new ApiError("SSO_NOT_CONFIGURED", "Mail SSO URL is not configured.", 501);
     }
-    return jsonResponse(request, { url: env.MAIL_SYSTEM_SSO_URL });
+
+    const payload = await readJson<{ turnstileToken?: unknown; returnTo?: unknown }>(request);
+    await verifyTurnstileToken({
+      env,
+      request,
+      token: typeof payload.turnstileToken === "string" ? payload.turnstileToken : null,
+      action: mailSsoTurnstileAction,
+      missingTokenMessage: "Complete the Cloudflare verification before continuing with ChemVault Mail.",
+    });
+
+    const returnTo = typeof payload.returnTo === "string" ? payload.returnTo : null;
+    return jsonResponse(request, { url: buildMailSsoDestination(env, request, returnTo).toString() });
   });
 
 function sanitizeReturnTo(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   return value;
+}
+
+function buildMailSsoDestination(env: Env, request: Request, returnTo: string | null): URL {
+  const requestUrl = new URL(request.url);
+  const redirectUri = new URL("/api/auth/sso/mail/callback", requestUrl.origin);
+  const destination = new URL(env.MAIL_SYSTEM_SSO_URL || "");
+  destination.searchParams.set("client_id", "chemvault_user");
+  destination.searchParams.set("redirect_uri", redirectUri.toString());
+  destination.searchParams.set("return_to", sanitizeReturnTo(returnTo));
+  return destination;
 }

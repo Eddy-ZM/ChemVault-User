@@ -3,6 +3,7 @@ import type { Env } from "./types";
 
 const siteverifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 export const registerTurnstileAction = "register_email";
+export const mailSsoTurnstileAction = "mail_sso";
 
 interface TurnstileSiteverifyResponse {
   success: boolean;
@@ -22,11 +23,13 @@ export async function verifyTurnstileToken({
   request,
   token,
   action = registerTurnstileAction,
+  missingTokenMessage = "Complete the Cloudflare verification before creating an account.",
 }: {
   env: Env;
   request: Request;
   token?: string | null;
   action?: string;
+  missingTokenMessage?: string;
 }): Promise<void> {
   if (!isTurnstileRequired(env)) return;
 
@@ -35,7 +38,7 @@ export async function verifyTurnstileToken({
   }
 
   if (!token) {
-    throw new ApiError("VALIDATION_ERROR", "Complete the Cloudflare verification before creating an account.", 400);
+    throw new ApiError("VALIDATION_ERROR", missingTokenMessage, 400);
   }
 
   const body = new FormData();

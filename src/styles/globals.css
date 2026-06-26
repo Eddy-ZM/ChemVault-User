@@ -337,6 +337,22 @@ textarea {
     @apply text-red-700;
   }
 
+  .mail-sso-control {
+    @apply grid gap-2;
+  }
+
+  .mail-turnstile-panel {
+    @apply min-h-0;
+  }
+
+  .mail-turnstile-panel .turnstile-widget {
+    @apply min-h-0;
+  }
+
+  .mail-sso-error {
+    @apply text-xs font-semibold leading-5 text-red-700;
+  }
+
   label {
     @apply grid gap-2 text-sm font-semibold text-slate-700;
   }

@@ -276,17 +276,29 @@ Do not commit generated import SQL, password hashes, salts, or plaintext credent
 
 ## Mail SSO
 
-The login page includes a "Continue with ChemVault Mail" entry. It starts at:
+The login page includes a "Continue with ChemVault Mail" entry. The button first runs Cloudflare Turnstile in background mode with action `mail_sso`, then posts the token to User Center:
 
 ```text
-GET /api/auth/sso/mail/start?returnTo=/dashboard
+GET /api/auth/sso/mail/options
+POST /api/auth/sso/mail/start
 ```
 
-If `MAIL_SYSTEM_SSO_URL` is configured, the user is redirected to the mail system with:
+`POST /api/auth/sso/mail/start` accepts:
+
+```json
+{
+  "returnTo": "/dashboard",
+  "turnstileToken": "..."
+}
+```
+
+If `MAIL_SYSTEM_SSO_URL` is configured and the Turnstile token passes Cloudflare `siteverify`, the API returns the mail-system redirect URL. The user is then redirected to the mail system with:
 
 - `client_id=chemvault_user`
 - `redirect_uri=https://user.chemvault.science/api/auth/sso/mail/callback`
 - `return_to=/dashboard`
+
+Direct `GET /api/auth/sso/mail/start` also requires a Turnstile token query parameter when verification is enabled, so opening the endpoint directly does not bypass human verification. Apple Account login intentionally does not use Turnstile.
 
 The mail system should redirect back to the callback with a signed assertion:
 
@@ -402,6 +414,7 @@ Auth:
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
+- `GET /api/auth/sso/mail/options`
 - `GET /api/auth/sso/mail/start`
 - `POST /api/auth/sso/mail/start`
 - `GET /api/auth/sso/mail/callback`

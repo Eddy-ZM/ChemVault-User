@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { ArrowLeft, LogIn, Mail } from "lucide-react";
+import { ArrowLeft, LogIn } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -8,6 +8,7 @@ import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { AppleSignInButton } from "../components/AppleSignInButton";
+import { MailSsoButton } from "../components/MailSsoButton";
 
 export function Login() {
   const { login } = useAuth();
@@ -88,10 +89,7 @@ export function Login() {
           or
           <span className="h-px flex-1 bg-slate-200" />
         </div>
-        <a className="secondary-button w-full justify-center" href={`/api/auth/sso/mail/start?returnTo=${encodeURIComponent(from)}`}>
-          <Mail className="h-4 w-4" />
-          Continue with ChemVault Mail
-        </a>
+        <MailSsoButton returnTo={from} />
         <AppleSignInButton returnTo={from} label="Continue with Apple" />
         <p className="text-center text-sm text-slate-500">
           New to ChemVault?{" "}

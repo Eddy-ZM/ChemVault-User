@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -8,6 +8,8 @@ declare global {
         options: {
           sitekey: string;
           action?: string;
+          appearance?: "always" | "execute" | "interaction-only";
+          execution?: "render" | "execute";
           theme?: "light" | "dark" | "auto";
           callback?: (token: string) => void;
           "expired-callback"?: () => void;
@@ -16,6 +18,7 @@ declare global {
       ) => string;
       remove: (widgetId: string) => void;
       reset: (widgetId?: string) => void;
+      execute: (container: HTMLElement | string) => void;
     };
   }
 }
@@ -46,23 +49,63 @@ function loadTurnstileScript(): Promise<void> {
   });
 }
 
-export function TurnstileWidget({
-  siteKey,
-  action,
-  onVerify,
-  onExpire,
-  onError,
-}: {
+export interface TurnstileWidgetHandle {
+  execute: () => void;
+  reset: () => void;
+}
+
+interface TurnstileWidgetProps {
   siteKey: string;
   action?: string;
+  appearance?: "always" | "execute" | "interaction-only";
+  execution?: "render" | "execute";
+  className?: string;
+  showStatus?: boolean;
   onVerify: (token: string) => void;
   onExpire: () => void;
   onError: () => void;
-}) {
+  onReady?: () => void;
+}
+
+export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(function TurnstileWidget(
+  {
+    siteKey,
+    action,
+    appearance = "always",
+    execution = "render",
+    className = "turnstile-panel",
+    showStatus = true,
+    onVerify,
+    onExpire,
+    onError,
+    onReady,
+  },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      execute: () => {
+        if (!containerRef.current || !window.turnstile) {
+          setFailed(true);
+          onError();
+          return;
+        }
+        window.turnstile.execute(containerRef.current);
+      },
+      reset: () => {
+        if (widgetIdRef.current && window.turnstile) {
+          window.turnstile.reset(widgetIdRef.current);
+        }
+      },
+    }),
+    [onError],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +116,8 @@ export function TurnstileWidget({
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
           action,
+          appearance,
+          execution,
           theme: "light",
           callback: (token) => {
             setLoading(false);
@@ -88,6 +133,7 @@ export function TurnstileWidget({
           },
         });
         setLoading(false);
+        onReady?.();
       })
       .catch(() => {
         setFailed(true);
@@ -102,13 +148,13 @@ export function TurnstileWidget({
       }
       widgetIdRef.current = null;
     };
-  }, [action, onError, onExpire, onVerify, siteKey]);
+  }, [action, appearance, execution, onError, onExpire, onReady, onVerify, siteKey]);
 
   return (
-    <div className="turnstile-panel">
+    <div className={className}>
       <div ref={containerRef} className="turnstile-widget" />
-      {loading ? <p>Loading Cloudflare verification...</p> : null}
-      {failed ? <p className="turnstile-error">Verification widget failed to load. Refresh the page and try again.</p> : null}
+      {showStatus && loading ? <p>Loading Cloudflare verification...</p> : null}
+      {showStatus && failed ? <p className="turnstile-error">Verification widget failed to load. Refresh the page and try again.</p> : null}
     </div>
   );
-}
+});
