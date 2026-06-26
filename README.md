@@ -10,6 +10,7 @@ The app includes account registration/login, httpOnly JWT cookie sessions, D1-ba
 - API: Cloudflare Pages Functions under `functions/`
 - Database: Cloudflare D1 binding `DB`
 - Avatar storage: Cloudflare R2 binding `AVATARS`, reserved for a future upload route
+- Email sending: Cloudflare Email Sending REST API, used for mailbox application notifications from Pages Functions
 - Auth: signed JWT in an httpOnly cookie; D1 stores only the session token hash
 - Password hashing: Workers-compatible Web Crypto PBKDF2-SHA256
 - External auth: ChemVault Mail password compatibility, signed Mail SSO assertions, and Apple Account SSO
@@ -61,6 +62,13 @@ MAIL_SYSTEM_SSO_SECRET="local-mail-sso-secret"
 # TURNSTILE_SITE_KEY="1x00000000000000000000AA"
 # TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
 # TURNSTILE_EXPECTED_HOSTNAME="localhost"
+
+# Optional mailbox application email routing. Production defaults are in wrangler.toml.
+# MAIL_APPLICATION_TO="it.apply@chemvault.science"
+# MAIL_APPLICATION_FROM="no-reply@chemvault.science"
+# Required only when testing mailbox application email delivery locally:
+# CLOUDFLARE_EMAIL_ACCOUNT_ID="your-cloudflare-account-id"
+# CLOUDFLARE_EMAIL_API_TOKEN="email-sending-api-token"
 ```
 
 Do not commit `.dev.vars`, real secrets, passwords, API keys, generated cookies, or generated admin SQL.
@@ -88,6 +96,8 @@ bucket_name = "chemvault-user-avatars"
 [vars]
 COOKIE_NAME = "chemvault_session"
 NODE_ENV = "production"
+MAIL_APPLICATION_TO = "it.apply@chemvault.science"
+MAIL_APPLICATION_FROM = "no-reply@chemvault.science"
 ```
 
 Set secrets outside source code:
@@ -96,6 +106,8 @@ Set secrets outside source code:
 openssl rand -base64 48 | npx wrangler pages secret put JWT_SECRET --project-name chemvault-user
 npx wrangler pages secret put MAIL_SYSTEM_SYNC_SECRET --project-name chemvault-user
 npx wrangler pages secret put MAIL_SYSTEM_SSO_SECRET --project-name chemvault-user
+npx wrangler pages secret put CLOUDFLARE_EMAIL_ACCOUNT_ID --project-name chemvault-user
+npx wrangler pages secret put CLOUDFLARE_EMAIL_API_TOKEN --project-name chemvault-user
 npx wrangler pages secret put APPLE_PRIVATE_KEY --project-name chemvault-user
 npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name chemvault-user
 ```
@@ -192,6 +204,16 @@ rm -f db/admin.sql
 
 The generated admin has `role='admin'`, `system_role='admin'`, `source='local'`, and `global_status='active'`.
 
+## Admin User Deletion
+
+Admins can soft delete users from `/admin/users` or `/admin/users/:id`. The UI calls:
+
+```text
+DELETE /api/admin/users/:id
+```
+
+This does not physically remove the row. It sets `status='deleted'` and `global_status='deleted'`, revokes the user's active sessions, and writes `user.delete` to `audit_logs`. Owner accounts cannot be deleted, and ordinary admins cannot delete protected `super_admin` or `owner` users.
+
 ## Permission Model
 
 Simple account tier remains in `users.role`:
@@ -252,6 +274,25 @@ DELETE /api/admin/mail/accounts/:id
 ```
 
 `DELETE` is a soft delete.
+
+Users who signed in through Apple Account, email registration, or another non-mail identity can request a ChemVault mailbox from `/services`. The user-facing API is:
+
+```text
+POST /api/user/mail-application
+```
+
+The request validates the desired `@chemvault.science` address, rejects accounts that already have a mailbox, sends a notification email to `MAIL_APPLICATION_TO` (default `it.apply@chemvault.science`), and writes `mail_application.request` to `audit_logs`.
+
+Cloudflare Email Service must be enabled for the sending domain before this API can deliver notifications. Pages projects do not currently accept the Workers `send_email` binding in `wrangler.toml`, so this project sends through Cloudflare's Email Sending REST API.
+
+```bash
+npx wrangler email sending list
+npx wrangler email sending enable chemvault.science
+npx wrangler pages secret put CLOUDFLARE_EMAIL_ACCOUNT_ID --project-name chemvault-user
+npx wrangler pages secret put CLOUDFLARE_EMAIL_API_TOKEN --project-name chemvault-user
+```
+
+The API token needs Cloudflare Email Sending permission for the account. The default sender is `no-reply@chemvault.science`. Change `MAIL_APPLICATION_FROM` only to an address on a domain onboarded to Cloudflare Email Sending.
 
 ## Mail Password Compatibility
 
@@ -327,6 +368,15 @@ The login and registration screens include "Continue with Apple Account". It sta
 ```text
 GET /api/auth/sso/apple/start?returnTo=/dashboard
 ```
+
+The browser first attempts the Apple JavaScript popup flow:
+
+```text
+GET  /api/auth/sso/apple/options?returnTo=/dashboard
+POST /api/auth/sso/apple/complete
+```
+
+`/api/auth/sso/apple/options` returns only client-safe values such as `clientId`, `redirectUri`, `state`, `nonce`, and `usePopup=true`. The Apple authorization code is still exchanged server-side by `/api/auth/sso/apple/complete`, which sets the same httpOnly session cookie as the redirect flow. If Apple JS is unavailable or popup initialization fails, the button falls back to the existing `/api/auth/sso/apple/start` redirect flow.
 
 When Apple Developer configuration is present, User Center redirects to Apple's authorization endpoint with:
 

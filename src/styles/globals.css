@@ -230,6 +230,15 @@ textarea {
     transform: translateY(-1px);
   }
 
+  .apple-signin-button:disabled {
+    @apply cursor-not-allowed opacity-70;
+    transform: none;
+  }
+
+  .apple-signin-error {
+    @apply text-center text-xs font-semibold leading-5 text-red-600;
+  }
+
   .apple-signin-button-static {
     @apply pointer-events-none;
   }

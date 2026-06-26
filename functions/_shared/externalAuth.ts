@@ -198,7 +198,7 @@ export async function completeSsoLogin(input: {
     return new Response(null, { status: 302, headers });
   }
 
-  return jsonResponse(input.request, { user: toPublicUser(input.user) }, { headers });
+  return jsonResponse(input.request, { user: toPublicUser(input.user), returnTo: sanitizeReturnTo(input.returnTo) }, { headers });
 }
 
 async function upsertMailIdentity(

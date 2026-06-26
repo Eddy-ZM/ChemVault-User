@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAppleAuthorizeRedirect, hasAppleSsoConfig } from "../functions/_shared/appleAuth";
+import { buildAppleAuthorizeRedirect, buildAppleClientOptions, hasAppleSsoConfig } from "../functions/_shared/appleAuth";
 import { signMailSsoAssertion, verifyMailPassword, verifyMailSsoAssertion } from "../functions/_shared/externalAuth";
 import type { Env } from "../functions/_shared/types";
 
@@ -53,5 +53,31 @@ describe("external mail auth", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("https://user.chemvault.science/login?sso=apple_not_configured");
+  });
+
+  it("builds Apple popup options without exposing server credentials", async () => {
+    const env = {
+      JWT_SECRET: "test-jwt-secret",
+      APPLE_CLIENT_ID: "com.science.chemvault.user",
+      APPLE_TEAM_ID: "TEAM123",
+      APPLE_KEY_ID: "KEY123",
+      APPLE_PRIVATE_KEY: "private-key",
+      APPLE_REDIRECT_URI: "https://user.chemvault.science/api/auth/sso/apple/callback",
+    } as Env;
+
+    const options = await buildAppleClientOptions({
+      env,
+      request: new Request("https://user.chemvault.science/api/auth/sso/apple/options?returnTo=/dashboard"),
+      returnTo: "/dashboard",
+    });
+
+    expect(options).toMatchObject({
+      clientId: "com.science.chemvault.user",
+      redirectUri: "https://user.chemvault.science/api/auth/sso/apple/callback",
+      scope: "name email",
+      usePopup: true,
+    });
+    expect(options.state).toContain(".");
+    expect(JSON.stringify(options)).not.toContain("private-key");
   });
 });

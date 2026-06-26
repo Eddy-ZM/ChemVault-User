@@ -1,10 +1,10 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { MailAccount, MailRole, SystemRole, User, UserRole, UserStatus } from "../lib/types";
 import { ButtonSpinner, EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
-import { Modal } from "../components/Modal";
+import { ConfirmDialog, Modal } from "../components/Modal";
 import { useToast } from "../components/Toast";
 
 const roles: UserRole[] = ["free", "pro", "admin"];
@@ -24,6 +24,7 @@ export function UserManagement() {
   const [error, setError] = useState("");
   const [mailTarget, setMailTarget] = useState<User | null>(null);
   const [mailSaving, setMailSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [mailForm, setMailForm] = useState({
     mailAddress: "",
     displayName: "",
@@ -133,6 +134,21 @@ export function UserManagement() {
     }
   }
 
+  async function deleteUser(user: User) {
+    setSavingUserId(user.id);
+    try {
+      const response = await apiRequest<{ ok: true; user: User }>(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      setUsers((current) => current.map((item) => (item.id === user.id ? { ...item, ...response.user } : item)));
+      notify({ title: "User deleted", description: user.email, tone: "warning" });
+      setDeleteTarget(null);
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "User delete failed.";
+      notify({ title: "User delete failed", description: message, tone: "error" });
+    } finally {
+      setSavingUserId("");
+    }
+  }
+
   function resetFilters() {
     setQuery("");
     setRoleFilter("");
@@ -232,6 +248,9 @@ export function UserManagement() {
                       <button className="icon-link" type="button" onClick={() => openMailModal(user)} title="Assign mailbox" disabled={Boolean(user.mailAddress)}>
                         <Mail className="h-4 w-4" />
                       </button>
+                      <button className="button-danger-icon" type="button" onClick={() => setDeleteTarget(user)} title="Delete user" disabled={user.status === "deleted"}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -293,6 +312,16 @@ export function UserManagement() {
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete user?"
+        description={deleteTarget ? `This will soft delete ${deleteTarget.email}, revoke active sessions, and preserve audit records.` : ""}
+        confirmLabel="Delete user"
+        tone="danger"
+        busy={savingUserId === deleteTarget?.id}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget ? void deleteUser(deleteTarget) : undefined}
+      />
     </section>
   );
 }

@@ -168,3 +168,34 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
 
     return jsonResponse(request, await buildUserDetail(env.DB, updated));
   });
+
+export const onRequestDelete: PagesFunction<Env> = async ({ env, request, params }) =>
+  handleApi(request, async () => {
+    const { user: actor } = await requireAdmin(env, request);
+    const target = await getUserById(env.DB, String(params.id || ""));
+    if (!target) throw new ApiError("VALIDATION_ERROR", "User not found.", 404);
+
+    assertActorCanManageTarget({ actor, target, action: "delete" });
+
+    const now = new Date().toISOString();
+    await env.DB.prepare(`UPDATE users SET status = 'deleted', global_status = 'deleted', updated_at = ? WHERE id = ?`)
+      .bind(now, target.id)
+      .run();
+
+    const deleted = await getUserById(env.DB, target.id);
+    if (!deleted) throw new ApiError("VALIDATION_ERROR", "User not found after delete.", 404);
+    await revokeAllUserSessions(env, deleted);
+
+    await writeAuditLog({
+      env,
+      request,
+      actorUserId: actor.id,
+      targetUserId: target.id,
+      action: "user.delete",
+      resourceType: "user",
+      resourceId: target.id,
+      details: { email: target.email, status: "deleted" },
+    });
+
+    return jsonResponse(request, { ok: true, user: toPublicUser(deleted) });
+  });

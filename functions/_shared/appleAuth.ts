@@ -52,6 +52,47 @@ export function hasAppleSsoConfig(env: Env): boolean {
   return Boolean(env.APPLE_CLIENT_ID && env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY);
 }
 
+export async function buildAppleClientOptions(input: {
+  env: Env;
+  request: Request;
+  returnTo?: string | null;
+  mode?: "login" | "link";
+  userId?: string;
+}): Promise<{
+  configured: true;
+  clientId: string;
+  redirectUri: string;
+  scope: string;
+  state: string;
+  nonce: string;
+  usePopup: true;
+}> {
+  if (!hasAppleSsoConfig(input.env)) {
+    throw new ApiError("SSO_NOT_CONFIGURED", "Apple Account login is not configured.", 501);
+  }
+
+  const requestUrl = new URL(input.request.url);
+  const mode = input.mode || "login";
+  const nonce = randomId("apple_nonce");
+  const state = await signAppleState(input.env, {
+    returnTo: sanitizeReturnTo(input.returnTo),
+    nonce,
+    exp: Math.floor(Date.now() / 1000) + 10 * 60,
+    mode,
+    userId: mode === "link" ? input.userId : undefined,
+  });
+
+  return {
+    configured: true,
+    clientId: input.env.APPLE_CLIENT_ID!,
+    redirectUri: getAppleRedirectUri(input.env, requestUrl),
+    scope: "name email",
+    state,
+    nonce,
+    usePopup: true,
+  };
+}
+
 export async function buildAppleAuthorizeRedirect(input: {
   env: Env;
   request: Request;
@@ -66,12 +107,12 @@ export async function buildAppleAuthorizeRedirect(input: {
   const requestUrl = new URL(input.request.url);
   const redirectUri = getAppleRedirectUri(input.env, requestUrl);
   const mode = input.mode || "login";
-  const state = await signAppleState(input.env, {
-    returnTo: sanitizeReturnTo(input.returnTo),
-    nonce: randomId("apple_nonce"),
-    exp: Math.floor(Date.now() / 1000) + 10 * 60,
+  const options = await buildAppleClientOptions({
+    env: input.env,
+    request: input.request,
+    returnTo: input.returnTo,
     mode,
-    userId: mode === "link" ? input.userId : undefined,
+    userId: input.userId,
   });
 
   const destination = new URL(appleAuthorizeUrl);
@@ -80,7 +121,8 @@ export async function buildAppleAuthorizeRedirect(input: {
   destination.searchParams.set("response_type", "code");
   destination.searchParams.set("response_mode", "form_post");
   destination.searchParams.set("scope", "name email");
-  destination.searchParams.set("state", state);
+  destination.searchParams.set("state", options.state);
+  destination.searchParams.set("nonce", options.nonce);
 
   return Response.redirect(destination.toString(), 302);
 }

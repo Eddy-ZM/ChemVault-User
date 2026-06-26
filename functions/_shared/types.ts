@@ -16,6 +16,10 @@ export interface Env {
   MAIL_SYSTEM_SYNC_SECRET?: string;
   MAIL_SYSTEM_SSO_SECRET?: string;
   MAIL_SYSTEM_SSO_URL?: string;
+  MAIL_APPLICATION_FROM?: string;
+  MAIL_APPLICATION_TO?: string;
+  CLOUDFLARE_EMAIL_ACCOUNT_ID?: string;
+  CLOUDFLARE_EMAIL_API_TOKEN?: string;
   APPLE_CLIENT_ID?: string;
   APPLE_TEAM_ID?: string;
   APPLE_KEY_ID?: string;

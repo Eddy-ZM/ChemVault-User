@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, RefreshCw } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { ChevronDown, RefreshCw, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { AuditLog, MailAccount, PageAccess, PermissionGrant, ServiceAccess, User } from "../lib/types";
 import { LoadingBlock, StatusBadge } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
+import { ConfirmDialog } from "../components/Modal";
 
 interface UserDetailResponse {
   user: User;
@@ -19,11 +20,14 @@ interface UserDetailResponse {
 
 export function UserDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { notify } = useToast();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   const [expandedLogId, setExpandedLogId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function load(showToast = false) {
     if (!id) return;
@@ -46,6 +50,22 @@ export function UserDetail() {
     void load();
   }, [id]);
 
+  async function deleteUser() {
+    if (!detail) return;
+    try {
+      setDeleting(true);
+      await apiRequest<{ ok: true; user: User }>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
+      notify({ title: "User deleted", description: detail.user.email, tone: "warning" });
+      navigate("/admin/users", { replace: true });
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "User delete failed.";
+      notify({ title: "User delete failed", description: message, tone: "error" });
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
   if (error) return <section className="page-section"><div className="alert-error">{error}</div></section>;
   if (!detail) return <section className="page-section"><LoadingBlock label="Loading user detail..." /></section>;
 
@@ -65,6 +85,10 @@ export function UserDetail() {
           <Link className="secondary-button" to={`/admin/users/${detail.user.id}/permissions`}>Permissions</Link>
           <Link className="secondary-button" to={`/admin/users/${detail.user.id}/services`}>Services</Link>
           <Link className="secondary-button" to={`/admin/users/${detail.user.id}/pages`}>Pages</Link>
+          <button className="danger-button" type="button" onClick={() => setConfirmDelete(true)} disabled={detail.user.status === "deleted"}>
+            <Trash2 className="h-4 w-4" />
+            Delete user
+          </button>
         </div>
       </div>
 
@@ -131,6 +155,16 @@ export function UserDetail() {
           )) : <p className="text-sm text-slate-500">No audit events for this user.</p>}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete this user?"
+        description={`This will soft delete ${detail.user.email}, revoke active sessions, and preserve audit records.`}
+        confirmLabel="Delete user"
+        tone="danger"
+        busy={deleting}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => void deleteUser()}
+      />
     </section>
   );
 }

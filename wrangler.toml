@@ -14,6 +14,8 @@ bucket_name = "chemvault-user-avatars"
 [vars]
 COOKIE_NAME = "chemvault_session"
 NODE_ENV = "production"
+MAIL_APPLICATION_TO = "it.apply@chemvault.science"
+MAIL_APPLICATION_FROM = "no-reply@chemvault.science"
 # Optional once the mail system exposes an SSO authorize endpoint:
 # MAIL_SYSTEM_SSO_URL = "https://mail.chemvault.science/api/sso/authorize"
 # Optional once Apple Developer Sign in with Apple is configured:
@@ -30,5 +32,7 @@ NODE_ENV = "production"
 # wrangler pages secret put MAIL_SYSTEM_SYNC_SECRET --project-name chemvault-user
 # wrangler pages secret put MAIL_SYSTEM_SSO_SECRET --project-name chemvault-user
 # If MAIL_SYSTEM_SSO_SECRET is not set, mail SSO falls back to MAIL_SYSTEM_SYNC_SECRET.
+# wrangler pages secret put CLOUDFLARE_EMAIL_ACCOUNT_ID --project-name chemvault-user
+# wrangler pages secret put CLOUDFLARE_EMAIL_API_TOKEN --project-name chemvault-user
 # wrangler pages secret put APPLE_PRIVATE_KEY --project-name chemvault-user
 # wrangler pages secret put TURNSTILE_SECRET_KEY --project-name chemvault-user
