@@ -9,6 +9,7 @@ export interface RegisterPayload {
   password: string;
   institution?: string | null;
   fieldOfInterest?: string | null;
+  turnstileToken?: string | null;
 }
 
 export interface ProfilePayload {
@@ -62,6 +63,7 @@ export function validateRegisterPayload(input: unknown): ValidationResult<Regist
       password,
       institution: cleanOptionalText(payload.institution, 180),
       fieldOfInterest: cleanOptionalText(payload.fieldOfInterest, 120),
+      turnstileToken: cleanOptionalText(payload.turnstileToken, 4096),
     },
   };
 }

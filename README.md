@@ -56,6 +56,11 @@ MAIL_SYSTEM_SSO_SECRET="local-mail-sso-secret"
 # APPLE_KEY_ID="YOUR_APPLE_KEY_ID"
 # APPLE_REDIRECT_URI="https://user.chemvault.science/api/auth/sso/apple/callback"
 # APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+# Optional local Turnstile testing. Without this, local development skips human verification.
+# TURNSTILE_SITE_KEY="1x00000000000000000000AA"
+# TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
+# TURNSTILE_EXPECTED_HOSTNAME="localhost"
 ```
 
 Do not commit `.dev.vars`, real secrets, passwords, API keys, generated cookies, or generated admin SQL.
@@ -92,6 +97,7 @@ openssl rand -base64 48 | npx wrangler pages secret put JWT_SECRET --project-nam
 npx wrangler pages secret put MAIL_SYSTEM_SYNC_SECRET --project-name chemvault-user
 npx wrangler pages secret put MAIL_SYSTEM_SSO_SECRET --project-name chemvault-user
 npx wrangler pages secret put APPLE_PRIVATE_KEY --project-name chemvault-user
+npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name chemvault-user
 ```
 
 `MAIL_SYSTEM_SSO_SECRET` is optional when it intentionally shares the same value as `MAIL_SYSTEM_SYNC_SECRET`; the code falls back to the sync secret. Set `MAIL_SYSTEM_SSO_URL` as a non-secret Pages variable only after the mail system has a real SSO authorize endpoint.
@@ -106,6 +112,37 @@ npx wrangler pages secret put APPLE_REDIRECT_URI --project-name chemvault-user
 ```
 
 `APPLE_PRIVATE_KEY` is a secret and must not be committed. If the private key is stored as one line, keep escaped `\n` line breaks; the Worker normalizes them at runtime.
+
+## Email Registration Verification
+
+Email self-registration is protected with Cloudflare Turnstile in production. The registration page calls:
+
+```text
+GET /api/auth/register-options
+```
+
+That endpoint returns the Turnstile site key and action for the current environment. `POST /api/auth/register` requires a valid `turnstileToken` when `NODE_ENV=production` or `TURNSTILE_SECRET_KEY` is configured. The server validates the token through Cloudflare `siteverify` before creating the account, so bypassing the browser does not bypass verification.
+
+Required Cloudflare setup:
+
+1. Create a Turnstile widget in Cloudflare for `user.chemvault.science`.
+2. Configure the public site key as a Pages variable:
+
+```bash
+npx wrangler pages secret put TURNSTILE_SITE_KEY --project-name chemvault-user
+```
+
+3. Configure the secret key as a Pages secret:
+
+```bash
+npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name chemvault-user
+```
+
+4. Set `TURNSTILE_EXPECTED_HOSTNAME=user.chemvault.science` as a Pages variable or secret if hostname enforcement should be strict.
+
+Production fails closed: if `NODE_ENV=production` and `TURNSTILE_SECRET_KEY` is missing, email registration returns a clear verification configuration error instead of creating accounts without protection. Local development skips verification unless a Turnstile secret is configured.
+
+Email-code verification is the alternate path if ChemVault later enables transactional email. That path should create short-lived, rate-limited verification codes, hash stored codes, enforce resend limits, and only create accounts after code confirmation.
 
 ## Database Setup And Migration
 
@@ -360,6 +397,7 @@ It currently returns a clear TODO response until the real `mail.chemvault.scienc
 
 Auth:
 
+- `GET /api/auth/register-options`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`

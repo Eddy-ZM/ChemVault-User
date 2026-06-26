@@ -27,6 +27,7 @@ describe("validators", () => {
     if (result.ok) {
       expect(result.value.email).toBe("ada@example.edu");
       expect(result.value.fieldOfInterest).toBe("Chemistry");
+      expect(result.value.turnstileToken).toBeNull();
     }
   });
 });

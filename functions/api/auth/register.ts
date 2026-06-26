@@ -3,11 +3,14 @@ import { getUserByEmail, insertDefaultServices, toPublicUser } from "../../_shar
 import { ApiError, handleApi, jsonResponse, readJson } from "../../_shared/responses";
 import { hashPassword, randomId } from "../../_shared/security";
 import type { Env, UserRow } from "../../_shared/types";
+import { verifyTurnstileToken } from "../../_shared/turnstile";
 import { requireValidRegisterPayload } from "../../_shared/validators";
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
     const payload = requireValidRegisterPayload(await readJson(request));
+    await verifyTurnstileToken({ env, request, token: payload.turnstileToken });
+
     const existing = await getUserByEmail(env.DB, payload.email);
     if (existing) {
       throw new ApiError("EMAIL_ALREADY_EXISTS", "An account with this email already exists.", 409);

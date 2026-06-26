@@ -1,7 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { ApiClientError } from "../lib/api";
+import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { isEmail, passwordError, required } from "../lib/validators";
 import { BrandLogo } from "../components/BrandLogo";
@@ -9,6 +9,15 @@ import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { AgreementModal, type AgreementKind } from "../components/LegalAgreement";
 import { AppleSignInButton } from "../components/AppleSignInButton";
+import { TurnstileWidget } from "../components/TurnstileWidget";
+
+interface RegisterOptions {
+  turnstile: {
+    siteKey: string | null;
+    required: boolean;
+    action: string;
+  };
+}
 
 export function Register() {
   const { register } = useAuth();
@@ -16,6 +25,34 @@ export function Register() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [agreementOpen, setAgreementOpen] = useState<AgreementKind | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [registerOptions, setRegisterOptions] = useState<RegisterOptions>({
+    turnstile: { siteKey: null, required: false, action: "register_email" },
+  });
+
+  useEffect(() => {
+    void apiRequest<RegisterOptions>("/api/auth/register-options")
+      .then(setRegisterOptions)
+      .catch(() => {
+        setRegisterOptions({ turnstile: { siteKey: null, required: true, action: "register_email" } });
+      });
+  }, []);
+
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken("");
+    setTurnstileResetKey((value) => value + 1);
+  }, []);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileToken("");
+  }, []);
+
+  const emailRegistrationUnavailable = registerOptions.turnstile.required && !registerOptions.turnstile.siteKey;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,6 +71,9 @@ export function Register() {
     if (passwordMessage) return setError(passwordMessage);
     if (password !== confirmPassword) return setError("Passwords do not match.");
     if (!terms) return setError("You must agree to the Terms of Service and Privacy Policy.");
+    if (registerOptions.turnstile.required && !turnstileToken) {
+      return setError("Complete the Cloudflare verification before creating an account.");
+    }
 
     setBusy(true);
     try {
@@ -43,10 +83,12 @@ export function Register() {
         password,
         institution: String(form.get("institution") || ""),
         fieldOfInterest: String(form.get("fieldOfInterest") || ""),
+        turnstileToken,
       });
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Registration failed.");
+      resetTurnstile();
     } finally {
       setBusy(false);
     }
@@ -121,7 +163,25 @@ export function Register() {
           Continuing with Apple Account creates or signs into a ChemVault main account under the same Terms and
           Privacy Policy.
         </p>
-        <button className="primary-button w-full justify-center" disabled={busy} type="submit">
+        {registerOptions.turnstile.required ? (
+          registerOptions.turnstile.siteKey ? (
+            <TurnstileWidget
+              key={turnstileResetKey}
+              siteKey={registerOptions.turnstile.siteKey}
+              action={registerOptions.turnstile.action}
+              onVerify={handleTurnstileVerify}
+              onExpire={resetTurnstile}
+              onError={handleTurnstileError}
+            />
+          ) : (
+            <div className="alert-error">
+              Email registration is temporarily unavailable because Cloudflare verification is not configured.
+            </div>
+          )
+        ) : (
+          <div className="alert-info">Cloudflare human verification is skipped in local development.</div>
+        )}
+        <button className="primary-button w-full justify-center" disabled={busy || emailRegistrationUnavailable} type="submit">
           {busy ? (
             <ButtonSpinner label="Creating account..." />
           ) : (

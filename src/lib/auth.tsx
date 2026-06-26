@@ -13,6 +13,7 @@ interface AuthContextValue {
     password: string;
     institution?: string;
     fieldOfInterest?: string;
+    turnstileToken?: string;
   }) => Promise<User>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;

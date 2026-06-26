@@ -321,6 +321,22 @@ textarea {
     @apply text-center text-sm font-semibold text-slate-500;
   }
 
+  .turnstile-panel {
+    @apply grid gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3;
+  }
+
+  .turnstile-widget {
+    @apply min-h-[65px];
+  }
+
+  .turnstile-panel p {
+    @apply text-xs font-medium leading-5 text-slate-500;
+  }
+
+  .turnstile-error {
+    @apply text-red-700;
+  }
+
   label {
     @apply grid gap-2 text-sm font-semibold text-slate-700;
   }
@@ -614,6 +630,10 @@ textarea {
 
   .legal-document section p {
     @apply mt-2 text-sm leading-6 text-slate-600;
+  }
+
+  .legal-document section ul {
+    @apply mt-3 grid list-disc gap-2 pl-5 text-sm leading-6 text-slate-600;
   }
 
   .legal-document-note {
