@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { ArrowLeft, LockKeyhole, UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -8,6 +8,7 @@ import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { AgreementModal, type AgreementKind } from "../components/LegalAgreement";
+import { AppleSignInButton } from "../components/AppleSignInButton";
 
 export function Register() {
   const { register } = useAuth();
@@ -62,10 +63,7 @@ export function Register() {
           <h1>Create account</h1>
           <p>Set up your ChemVault profile for research tools, usage history, and future billing.</p>
         </div>
-        <a className="secondary-button w-full justify-center" href="/api/auth/sso/apple/start?returnTo=/dashboard">
-          <LockKeyhole className="h-4 w-4" />
-          Continue with Apple ID
-        </a>
+        <AppleSignInButton label="Continue with Apple" />
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
           or create with email

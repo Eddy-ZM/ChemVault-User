@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { ArrowLeft, LockKeyhole, LogIn, Mail } from "lucide-react";
+import { ArrowLeft, LogIn, Mail } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -7,6 +7,7 @@ import { isEmail, required } from "../lib/validators";
 import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
+import { AppleSignInButton } from "../components/AppleSignInButton";
 
 export function Login() {
   const { login } = useAuth();
@@ -91,10 +92,7 @@ export function Login() {
           <Mail className="h-4 w-4" />
           Continue with ChemVault Mail
         </a>
-        <a className="secondary-button w-full justify-center" href={`/api/auth/sso/apple/start?returnTo=${encodeURIComponent(from)}`}>
-          <LockKeyhole className="h-4 w-4" />
-          Continue with Apple ID
-        </a>
+        <AppleSignInButton returnTo={from} label="Continue with Apple" />
         <p className="text-center text-sm text-slate-500">
           New to ChemVault?{" "}
           <Link className="font-semibold text-blue-700" to="/register">
