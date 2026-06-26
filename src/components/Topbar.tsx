@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { UserAvatar } from "./UserAvatar";
 import { ConfirmDialog } from "./Modal";
 import { useToast } from "./Toast";
+import { chemVaultLogoSrc } from "./BrandLogo";
 
 export function Topbar({ onMenu, onCommand }: { onMenu: () => void; onCommand: () => void }) {
   const { user, logout } = useAuth();
@@ -26,9 +27,12 @@ export function Topbar({ onMenu, onCommand }: { onMenu: () => void; onCommand: (
         <button className="icon-button lg:hidden" type="button" onClick={onMenu} aria-label="Open navigation">
           <Menu className="h-4 w-4" />
         </button>
+        <span className="topbar-logo" aria-hidden="true">
+          <img src={chemVaultLogoSrc} alt="" />
+        </span>
         <div className="min-w-0">
-        <p className="label">ChemVault User Center</p>
-        <h1 className="truncate text-xl font-semibold tracking-[0] text-slate-950 sm:text-2xl">Unified account workspace</h1>
+          <p className="label">ChemVault User Center</p>
+          <h1 className="truncate text-xl font-semibold tracking-[0] text-slate-950 sm:text-2xl">Unified account workspace</h1>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">

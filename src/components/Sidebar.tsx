@@ -2,6 +2,7 @@ import { BarChart3, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Mail, Ne
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "../lib/auth";
+import { BrandLogo } from "./BrandLogo";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,12 +30,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         onClick={onClose}
       />
       <aside className={`sidebar ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
-      <NavLink to="/dashboard" className="brand-block">
-        <div className="brand-mark">CV</div>
-        <div>
-          <strong>ChemVault</strong>
-          <span>User Center</span>
-        </div>
+      <NavLink to="/dashboard" className="no-underline">
+        <BrandLogo />
       </NavLink>
       <nav className="mt-5 grid gap-2 overflow-y-auto pb-1 lg:mt-7 lg:overflow-visible lg:pb-0">
         {navItems.map((item) => (

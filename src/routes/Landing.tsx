@@ -1,6 +1,8 @@
 import { ArrowRight, FlaskConical, LockKeyhole, Network } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { BrandLogo } from "../components/BrandLogo";
+import { UserSystemFooter } from "../components/UserSystemFooter";
 
 export function Landing() {
   const { user, loading } = useAuth();
@@ -9,13 +11,7 @@ export function Landing() {
   return (
     <main className="gateway">
       <section className="gateway-panel">
-        <div className="brand-block">
-          <div className="brand-mark">CV</div>
-          <div>
-            <strong>ChemVault User Center</strong>
-            <span>user.chemvault.science</span>
-          </div>
-        </div>
+        <BrandLogo title="ChemVault User Center" subtitle="user.chemvault.science" />
         <div className="gateway-grid">
           <div>
             <h1>ChemVault accounts, permissions, and usage in one place.</h1>
@@ -48,6 +44,7 @@ export function Landing() {
           </div>
         </div>
       </section>
+      <UserSystemFooter compact />
     </main>
   );
 }

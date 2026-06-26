@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { CommandPalette } from "./CommandPalette";
+import { UserSystemFooter } from "./UserSystemFooter";
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,9 +23,12 @@ export function Layout() {
   return (
     <div className="app-shell">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="min-w-0 flex-1">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setSidebarOpen(true)} onCommand={() => setCommandOpen(true)} />
-        <Outlet />
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        <UserSystemFooter />
       </main>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </div>

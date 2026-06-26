@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { isEmail, passwordError, required } from "../lib/validators";
+import { BrandLogo } from "../components/BrandLogo";
+import { UserSystemFooter } from "../components/UserSystemFooter";
 
 export function Register() {
   const { register } = useAuth();
@@ -49,9 +51,9 @@ export function Register() {
   return (
     <main className="auth-page">
       <form className="auth-card auth-card-wide" onSubmit={handleSubmit}>
-        <Link className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-700" to="/">
+        <Link className="auth-brand-link" to="/">
           <ArrowLeft className="h-4 w-4" />
-          ChemVault User Center
+          <BrandLogo compact title="ChemVault User Center" subtitle="Account enrollment" />
         </Link>
         <div>
           <h1>Create account</h1>
@@ -106,6 +108,7 @@ export function Register() {
           </Link>
         </p>
       </form>
+      <UserSystemFooter compact />
     </main>
   );
 }

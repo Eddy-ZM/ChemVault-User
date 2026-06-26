@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { isEmail, required } from "../lib/validators";
+import { BrandLogo } from "../components/BrandLogo";
+import { UserSystemFooter } from "../components/UserSystemFooter";
 
 export function Login() {
   const { login } = useAuth();
@@ -43,9 +45,9 @@ export function Login() {
   return (
     <main className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <Link className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-700" to="/">
+        <Link className="auth-brand-link" to="/">
           <ArrowLeft className="h-4 w-4" />
-          ChemVault User Center
+          <BrandLogo compact title="ChemVault User Center" subtitle="Secure sign-in" />
         </Link>
         <div>
           <h1>Login</h1>
@@ -85,6 +87,7 @@ export function Login() {
           </Link>
         </p>
       </form>
+      <UserSystemFooter compact />
     </main>
   );
 }
