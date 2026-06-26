@@ -1,0 +1,16 @@
+-- ChemVault User Center seed file.
+--
+-- This project does not commit a real default admin password hash.
+-- Generate an admin insert with:
+--
+--   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='change-me-strong' ADMIN_NAME='ChemVault Admin' npm run --silent create-admin > db/admin.sql
+--
+-- Then apply the printed SQL to local D1:
+--
+--   npx wrangler d1 execute chemvault_user --local --file db/admin.sql
+--
+-- Or to remote D1:
+--
+--   npx wrangler d1 execute chemvault_user --remote --file db/admin.sql
+--
+-- Optional local usage samples can be inserted after you know the generated admin id.

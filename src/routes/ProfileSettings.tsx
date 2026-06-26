@@ -1,0 +1,115 @@
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { Save, Upload } from "lucide-react";
+import { UserAvatar } from "../components/UserAvatar";
+import { ApiClientError, apiRequest } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import type { User } from "../lib/types";
+
+export function ProfileSettings() {
+  const { user, setUser } = useAuth();
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAvatarPreview(user?.avatarUrl || null);
+  }, [user?.avatarUrl]);
+
+  if (!user) return null;
+
+  async function handleAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setAvatarPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+
+    try {
+      const body = await apiRequest<{ user: User }>("/api/user/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: String(form.get("name") || ""),
+          institution: String(form.get("institution") || ""),
+          fieldOfInterest: String(form.get("fieldOfInterest") || ""),
+          bio: String(form.get("bio") || ""),
+          website: String(form.get("website") || ""),
+          // TODO: Replace this base64/mock avatarUrl with R2 upload once the AVATARS bucket URL policy is finalized.
+          avatarUrl: avatarPreview,
+        }),
+      });
+      setUser(body.user);
+      setMessage("Profile updated.");
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : "Profile update failed.");
+    }
+  }
+
+  return (
+    <section className="page-section">
+      <div className="section-heading">
+        <div>
+          <p className="label">Profile Settings</p>
+          <h1>Research identity</h1>
+        </div>
+      </div>
+      <form className="settings-panel" onSubmit={handleSubmit}>
+        {message ? <div className="alert-success">{message}</div> : null}
+        {error ? <div className="alert-error">{error}</div> : null}
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <UserAvatar user={{ ...user, avatarUrl: avatarPreview }} size="lg" />
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Avatar</h2>
+              <p className="text-sm text-slate-500">Images are previewed locally and stored as avatarUrl until R2 upload is enabled.</p>
+            </div>
+          </div>
+          <label className="secondary-button cursor-pointer">
+            <Upload className="h-4 w-4" />
+            Upload
+            <input className="sr-only" accept="image/*" type="file" onChange={handleAvatar} />
+          </label>
+        </div>
+        <div className="form-grid">
+          <label>
+            Display name
+            <input name="name" defaultValue={user.name} required />
+          </label>
+          <label>
+            Institution
+            <input name="institution" defaultValue={user.institution || ""} />
+          </label>
+          <label>
+            Field of Interest
+            <select name="fieldOfInterest" defaultValue={user.fieldOfInterest || ""}>
+              <option value="">Select field</option>
+              <option>Chemistry</option>
+              <option>Computer Science</option>
+              <option>Biology</option>
+              <option>Materials Science</option>
+              <option>Pharmaceutical Science</option>
+            </select>
+          </label>
+          <label>
+            Website / GitHub link
+            <input name="website" defaultValue={user.website || ""} placeholder="https://github.com/..." />
+          </label>
+        </div>
+        <label>
+          Bio
+          <textarea name="bio" defaultValue={user.bio || ""} rows={5} />
+        </label>
+        <button className="primary-button w-fit" type="submit">
+          <Save className="h-4 w-4" />
+          Save profile
+        </button>
+      </form>
+    </section>
+  );
+}

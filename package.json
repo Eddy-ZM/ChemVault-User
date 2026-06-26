@@ -1,0 +1,39 @@
+{
+  "name": "chemvault-user-center",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "pages:dev": "npm run build && wrangler pages dev dist",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "db:schema:local": "wrangler d1 execute chemvault_user --local --file db/schema.sql",
+    "db:schema:remote": "wrangler d1 execute chemvault_user --remote --file db/schema.sql",
+    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name chemvault-user",
+    "create-admin": "node scripts/create-admin.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260620.0",
+    "@types/node": "^22.15.3",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.22.0"
+  }
+}
