@@ -18,6 +18,8 @@ interface AppleState {
   returnTo: string;
   nonce: string;
   exp: number;
+  mode: "login" | "link";
+  userId?: string;
 }
 
 interface AppleTokenResponse {
@@ -54,6 +56,8 @@ export async function buildAppleAuthorizeRedirect(input: {
   env: Env;
   request: Request;
   returnTo?: string | null;
+  mode?: "login" | "link";
+  userId?: string;
 }): Promise<Response> {
   if (!hasAppleSsoConfig(input.env)) {
     return redirectToLogin(input.request, "apple_not_configured");
@@ -61,10 +65,13 @@ export async function buildAppleAuthorizeRedirect(input: {
 
   const requestUrl = new URL(input.request.url);
   const redirectUri = getAppleRedirectUri(input.env, requestUrl);
+  const mode = input.mode || "login";
   const state = await signAppleState(input.env, {
     returnTo: sanitizeReturnTo(input.returnTo),
     nonce: randomId("apple_nonce"),
     exp: Math.floor(Date.now() / 1000) + 10 * 60,
+    mode,
+    userId: mode === "link" ? input.userId : undefined,
   });
 
   const destination = new URL(appleAuthorizeUrl);
@@ -97,14 +104,31 @@ export async function completeAppleCallback(input: {
   const token = await exchangeAppleCode(input.env, input.code, getAppleRedirectUri(input.env, requestUrl));
   const idToken = await verifyAppleIdToken(input.env, token.id_token || "");
   const userInfo = parseAppleUserPayload(input.userPayload);
-  const user = await upsertAppleUser(input.env, {
+  const appleIdentity = {
     subject: idToken.sub!,
     email: normalizeEmail(idToken.email || userInfo.email || ""),
     name: userInfo.name,
     emailVerified: idToken.email_verified,
-  });
+  };
 
-  return await completeSsoLogin({ env: input.env, request: input.request, user, returnTo: state.returnTo });
+  if (state.mode === "link") {
+    const userId = state.userId || "";
+    const user = userId ? await getUserById(input.env.DB, userId) : null;
+    if (!user) throw new ApiError("UNAUTHORIZED", "Apple link session is no longer valid.", 401);
+    await linkAppleIdentityToUser(input.env, {
+      userId: user.id,
+      subject: appleIdentity.subject,
+      email: appleIdentity.email || user.email,
+      name: appleIdentity.name,
+      emailVerified: appleIdentity.emailVerified,
+    });
+    return await completeSsoLogin({ env: input.env, request: input.request, user, returnTo: state.returnTo });
+  }
+
+  const result = await upsertAppleUser(input.env, appleIdentity);
+  const returnTo = result.isNewAccount ? "/onboarding/apple" : state.returnTo;
+
+  return await completeSsoLogin({ env: input.env, request: input.request, user: result.user, returnTo });
 }
 
 export async function readAppleCallbackPayload(request: Request): Promise<{
@@ -164,7 +188,7 @@ async function exchangeAppleCode(env: Env, code: string, redirectUri: string): P
 async function upsertAppleUser(
   env: Env,
   input: { subject: string; email: string; name: string | null; emailVerified: boolean | string | undefined },
-): Promise<UserRow> {
+): Promise<{ user: UserRow; isNewAccount: boolean }> {
   const now = new Date().toISOString();
   const existingIdentity = await env.DB.prepare(
     `SELECT user_id, provider_email FROM external_identities
@@ -176,6 +200,7 @@ async function upsertAppleUser(
 
   let user = existingIdentity?.user_id ? await getUserById(env.DB, existingIdentity.user_id) : null;
   const email = input.email || existingIdentity?.provider_email || "";
+  let isNewAccount = false;
 
   if (!user && validateEmail(email)) {
     user = await getUserByEmail(env.DB, email);
@@ -187,6 +212,7 @@ async function upsertAppleUser(
   if (!user) {
     const id = randomId("user");
     const name = input.name || email.split("@")[0] || "Apple User";
+    isNewAccount = true;
     await env.DB.prepare(
       `INSERT INTO users (
         id, email, password_hash, name, avatar_url, institution, field_of_interest,
@@ -211,22 +237,67 @@ async function upsertAppleUser(
 
   if (!user) throw new ApiError("INTERNAL_ERROR", "Apple user could not be loaded.", 500);
 
+  await upsertAppleIdentity(env, {
+    userId: user.id,
+    subject: input.subject,
+    email: email || user.email,
+    name: input.name,
+    emailVerified: input.emailVerified,
+    now,
+  });
+
+  return { user, isNewAccount };
+}
+
+async function linkAppleIdentityToUser(
+  env: Env,
+  input: { userId: string; subject: string; email: string; name: string | null; emailVerified: boolean | string | undefined },
+): Promise<void> {
+  const existing = await env.DB.prepare(
+    `SELECT user_id FROM external_identities
+     WHERE provider = ? AND provider_user_id = ?
+     LIMIT 1`,
+  )
+    .bind(appleProvider, input.subject)
+    .first<{ user_id: string }>();
+
+  if (existing?.user_id && existing.user_id !== input.userId) {
+    throw new ApiError("VALIDATION_ERROR", "This Apple ID is already linked to another ChemVault account.", 409);
+  }
+
+  await upsertAppleIdentity(env, {
+    userId: input.userId,
+    subject: input.subject,
+    email: input.email,
+    name: input.name,
+    emailVerified: input.emailVerified,
+    now: new Date().toISOString(),
+  });
+}
+
+async function upsertAppleIdentity(
+  env: Env,
+  input: {
+    userId: string;
+    subject: string;
+    email: string;
+    name: string | null;
+    emailVerified: boolean | string | undefined;
+    now: string;
+  },
+): Promise<void> {
+  const metadata = JSON.stringify({
+    emailVerified: input.emailVerified ?? null,
+    displayNameFromApple: input.name,
+  });
+
   await env.DB.prepare(
     `INSERT OR IGNORE INTO external_identities (
       id, user_id, provider, provider_user_id, provider_email, credential_hash,
       credential_salt, credential_algorithm, metadata, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
   )
-    .bind(
-      randomId("ext"),
-      user.id,
-      appleProvider,
-      input.subject,
-      email || user.email,
-      JSON.stringify({ emailVerified: input.emailVerified ?? null }),
-      now,
-      now,
-    )
+    .bind(randomId("ext"), input.userId, appleProvider, input.subject, input.email, metadata, input.now, input.now)
     .run();
 
   await env.DB.prepare(
@@ -237,17 +308,8 @@ async function upsertAppleUser(
       updated_at = ?
      WHERE provider = ? AND provider_user_id = ?`,
   )
-    .bind(
-      user.id,
-      email || user.email,
-      JSON.stringify({ emailVerified: input.emailVerified ?? null }),
-      now,
-      appleProvider,
-      input.subject,
-    )
+    .bind(input.userId, input.email, metadata, input.now, appleProvider, input.subject)
     .run();
-
-  return user;
 }
 
 async function verifyAppleIdToken(env: Env, idToken: string): Promise<AppleIdTokenPayload> {
@@ -325,7 +387,11 @@ async function verifyAppleState(env: Env, state: string): Promise<AppleState> {
   if (!parsed.exp || parsed.exp <= Math.floor(Date.now() / 1000)) {
     throw new ApiError("INVALID_SSO_ASSERTION", "Apple sign-in state expired.", 401);
   }
-  return { ...parsed, returnTo: sanitizeReturnTo(parsed.returnTo) };
+  return {
+    ...parsed,
+    mode: parsed.mode === "link" ? "link" : "login",
+    returnTo: sanitizeReturnTo(parsed.returnTo),
+  };
 }
 
 async function hmacBase64Url(value: string, secret: string): Promise<string> {

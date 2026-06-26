@@ -1,17 +1,26 @@
-import { FormEvent, useState } from "react";
-import { Eye, EyeOff, KeyRound, Laptop, LogOut, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { Eye, EyeOff, Fingerprint, KeyRound, Laptop, LogOut, Trash2 } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { passwordError } from "../lib/validators";
 import { ConfirmDialog } from "../components/Modal";
 import { useToast } from "../components/Toast";
-import { ButtonSpinner } from "../components/UiPrimitives";
+import { ButtonSpinner, StatusBadge } from "../components/UiPrimitives";
+import { AppleSignInButton } from "../components/AppleSignInButton";
+
+interface ExternalIdentity {
+  provider: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export function SecuritySettings() {
   const { notify } = useToast();
   const { logout, setUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [deleteText, setDeleteText] = useState("");
@@ -19,6 +28,27 @@ export function SecuritySettings() {
   const [showPasswords, setShowPasswords] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [identities, setIdentities] = useState<ExternalIdentity[]>([]);
+
+  useEffect(() => {
+    void loadExternalIdentities();
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("apple") === "linked") {
+      setMessage("Apple ID linked.");
+      notify({ title: "Apple ID linked", description: "You can now sign in to this account with Apple.", tone: "success" });
+    }
+  }, [notify, searchParams]);
+
+  async function loadExternalIdentities() {
+    try {
+      const body = await apiRequest<{ identities: ExternalIdentity[] }>("/api/user/external-identities");
+      setIdentities(body.identities);
+    } catch {
+      setIdentities([]);
+    }
+  }
 
   async function handlePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,6 +104,8 @@ export function SecuritySettings() {
     setMessage("Logout all devices is reserved for the multi-session device UI.");
     notify({ title: "Coming soon", description: "Logout all devices is reserved for the multi-session device UI.", tone: "info" });
   }
+
+  const appleIdentity = identities.find((identity) => identity.provider === "apple");
 
   return (
     <section className="page-section">
@@ -136,6 +168,33 @@ export function SecuritySettings() {
               Logout current session
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="settings-panel">
+        <div className="flex items-center gap-3">
+          <div className="icon-tile">
+            <Fingerprint className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">External sign-in</h2>
+            <p className="text-sm text-slate-500">Bind Apple ID to use Apple sign-in with this existing ChemVault account.</p>
+          </div>
+        </div>
+        <div className="external-identity-card">
+          <div>
+            <p className="font-semibold text-slate-950">Apple ID</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {appleIdentity ? `Linked as ${appleIdentity.email}` : "Not linked yet. You will be sent to Apple to confirm ownership."}
+            </p>
+          </div>
+          {appleIdentity ? (
+            <StatusBadge value="active" />
+          ) : (
+            <div className="w-full sm:w-72">
+              <AppleSignInButton mode="link" returnTo="/settings/security?apple=linked" label="Bind Apple ID" />
+            </div>
+          )}
         </div>
       </div>
 

@@ -290,6 +290,16 @@ When Apple Developer configuration is present, User Center redirects to Apple's 
 
 The callback exchanges the authorization code at Apple's token endpoint, verifies Apple's `id_token` signature against Apple's JWKS, checks issuer/audience/expiry claims, then links or creates a ChemVault main account using `external_identities` with `provider='apple'`.
 
+Existing ChemVault users can bind Apple ID from `/settings/security`. The binding flow uses:
+
+```text
+GET /api/auth/sso/apple/start?mode=link&returnTo=/settings/security?apple=linked
+```
+
+The link flow requires the current ChemVault session before redirecting to Apple. After Apple confirms ownership, the Apple subject is linked to the current main account instead of creating a second account.
+
+New accounts created by Apple sign-in are redirected to `/onboarding/apple`, where the user completes display name, institution, field of interest, and optional bio before entering the dashboard.
+
 Required Apple Developer setup:
 
 1. Enable Sign in with Apple for the relevant Apple Developer account.
