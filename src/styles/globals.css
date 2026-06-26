@@ -530,10 +530,10 @@ textarea {
   }
 
   .user-system-footer {
-    @apply mx-5 mb-5 mt-2 border-t border-slate-200/80 px-0 pt-5 text-slate-500 lg:mx-8 lg:mb-8;
+    @apply mx-5 mb-5 mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950 px-5 pt-5 text-slate-400 shadow-sm lg:mx-8 lg:mb-8 lg:px-6;
     background:
-      linear-gradient(90deg, rgba(15, 23, 42, 0.07), rgba(14, 165, 233, 0.08), rgba(15, 23, 42, 0.02)) top left / 100% 1px no-repeat,
-      transparent;
+      linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98)),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.14), rgba(99, 102, 241, 0.08), rgba(15, 23, 42, 0));
     animation: footer-rise 520ms ease-out;
   }
 
@@ -552,23 +552,23 @@ textarea {
   }
 
   .user-system-footer-brand strong {
-    @apply text-sm font-semibold text-slate-950 md:text-base;
+    @apply text-sm font-semibold text-white md:text-base;
   }
 
   .user-system-footer-brand span:last-child {
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400;
   }
 
   .user-system-footer .brand-mark {
-    @apply h-9 w-9 border-slate-200 bg-white shadow-none;
+    @apply h-9 w-9 border-white/15 bg-white shadow-none;
   }
 
   .user-system-footer p {
-    @apply mt-3 max-w-2xl text-sm leading-6 text-slate-500;
+    @apply mt-3 max-w-2xl text-sm leading-6 text-slate-400;
   }
 
   .user-system-footer-base {
-    @apply mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-slate-200/80 py-4 text-xs font-medium text-slate-400;
+    @apply mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/10 py-4 text-xs font-medium text-slate-400;
   }
 
   .user-system-footer-base nav {
