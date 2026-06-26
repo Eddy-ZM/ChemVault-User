@@ -514,16 +514,11 @@ textarea {
   }
 
   .user-system-footer {
-    @apply relative mx-5 mb-5 mt-2 overflow-hidden rounded-lg border border-slate-800 bg-slate-950 text-slate-300 shadow-card lg:mx-8 lg:mb-8;
+    @apply mx-5 mb-5 mt-2 border-t border-slate-200/80 px-0 pt-5 text-slate-500 lg:mx-8 lg:mb-8;
     background:
-      linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(2, 6, 23, 0.99) 100%),
-      linear-gradient(90deg, rgba(34, 211, 238, 0.18), rgba(148, 163, 184, 0.08), rgba(245, 158, 11, 0.14));
+      linear-gradient(90deg, rgba(15, 23, 42, 0.07), rgba(14, 165, 233, 0.08), rgba(15, 23, 42, 0.02)) top left / 100% 1px no-repeat,
+      transparent;
     animation: footer-rise 520ms ease-out;
-  }
-
-  .user-system-footer-crown {
-    @apply h-1 w-full;
-    background: linear-gradient(90deg, #22d3ee 0%, #60a5fa 34%, #a78bfa 64%, #fbbf24 100%);
   }
 
   .user-system-footer-compact {
@@ -532,61 +527,32 @@ textarea {
     max-width: 72rem;
   }
 
-  .user-system-footer-grid {
-    @apply grid gap-6 px-5 py-5 md:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] md:items-stretch lg:px-6;
+  .user-system-footer-inner {
+    @apply flex flex-col gap-3 py-2;
   }
 
-  .user-system-footer-authority {
-    @apply min-w-0;
+  .user-system-footer-primary {
+    @apply min-w-0 max-w-3xl;
   }
 
   .user-system-footer-brand strong {
-    @apply text-base font-semibold text-white md:text-lg;
+    @apply text-sm font-semibold text-slate-950 md:text-base;
+  }
+
+  .user-system-footer-brand span:last-child {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+  }
+
+  .user-system-footer .brand-mark {
+    @apply h-9 w-9 border-slate-200 bg-white shadow-none;
   }
 
   .user-system-footer p {
-    @apply mt-4 max-w-3xl text-sm leading-6 text-slate-400;
-  }
-
-  .user-system-footer-scope {
-    @apply mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4;
-  }
-
-  .user-system-footer-scope span {
-    @apply inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-slate-300;
-  }
-
-  .user-system-footer-scope svg {
-    @apply shrink-0 text-cyan-300;
-  }
-
-  .user-system-footer-pillars {
-    @apply grid gap-2;
-  }
-
-  .user-system-footer-pillar {
-    @apply flex min-h-16 items-center gap-3 rounded-lg border border-white/10 bg-white/[0.045] px-4 text-slate-300 transition;
-  }
-
-  .user-system-footer-pillar:hover {
-    @apply border-cyan-300/40 bg-white/[0.075] text-white;
-    transform: translateY(-1px);
-  }
-
-  .user-system-footer-pillar svg {
-    @apply shrink-0 text-cyan-300;
-  }
-
-  .user-system-footer-pillar strong {
-    @apply block text-xs font-semibold uppercase tracking-[0.1em] text-white;
-  }
-
-  .user-system-footer-pillar small {
-    @apply mt-1 block text-xs font-semibold text-slate-400;
+    @apply mt-3 max-w-2xl text-sm leading-6 text-slate-500;
   }
 
   .user-system-footer-base {
-    @apply flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/10 bg-black/25 px-5 py-3 text-xs font-semibold text-slate-400 lg:px-6;
+    @apply mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-slate-200/80 py-4 text-xs font-medium text-slate-400;
   }
 
   .user-system-footer-base nav {
