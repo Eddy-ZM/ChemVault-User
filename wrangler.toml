@@ -16,9 +16,15 @@ COOKIE_NAME = "chemvault_session"
 NODE_ENV = "production"
 # Optional once the mail system exposes an SSO authorize endpoint:
 # MAIL_SYSTEM_SSO_URL = "https://mail.chemvault.science/api/sso/authorize"
+# Optional once Apple Developer Sign in with Apple is configured:
+# APPLE_CLIENT_ID = "science.chemvault.user"
+# APPLE_TEAM_ID = "YOUR_APPLE_TEAM_ID"
+# APPLE_KEY_ID = "YOUR_APPLE_KEY_ID"
+# APPLE_REDIRECT_URI = "https://user.chemvault.science/api/auth/sso/apple/callback"
 
 # Configure secrets outside this file:
 # wrangler pages secret put JWT_SECRET --project-name chemvault-user
 # wrangler pages secret put MAIL_SYSTEM_SYNC_SECRET --project-name chemvault-user
 # wrangler pages secret put MAIL_SYSTEM_SSO_SECRET --project-name chemvault-user
 # If MAIL_SYSTEM_SSO_SECRET is not set, mail SSO falls back to MAIL_SYSTEM_SYNC_SECRET.
+# wrangler pages secret put APPLE_PRIVATE_KEY --project-name chemvault-user

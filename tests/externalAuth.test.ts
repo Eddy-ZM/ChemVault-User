@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildAppleAuthorizeRedirect, hasAppleSsoConfig } from "../functions/_shared/appleAuth";
 import { signMailSsoAssertion, verifyMailPassword, verifyMailSsoAssertion } from "../functions/_shared/externalAuth";
 import type { Env } from "../functions/_shared/types";
 
@@ -38,5 +39,19 @@ describe("external mail auth", () => {
     });
 
     await expect(verifyMailSsoAssertion(env, { ...assertion, name: "Tampered" })).rejects.toThrow("Mail SSO signature is invalid.");
+  });
+
+  it("redirects Apple SSO start back to login when Apple credentials are not configured", async () => {
+    const env = {} as Env;
+    expect(hasAppleSsoConfig(env)).toBe(false);
+
+    const response = await buildAppleAuthorizeRedirect({
+      env,
+      request: new Request("https://user.chemvault.science/api/auth/sso/apple/start?returnTo=/dashboard"),
+      returnTo: "/dashboard",
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://user.chemvault.science/login?sso=apple_not_configured");
   });
 });

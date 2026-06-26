@@ -193,7 +193,7 @@ export async function completeSsoLogin(input: {
   });
 
   const accept = input.request.headers.get("accept") || "";
-  if (input.request.method === "GET" && accept.includes("text/html")) {
+  if (accept.includes("text/html")) {
     headers.set("Location", sanitizeReturnTo(input.returnTo));
     return new Response(null, { status: 302, headers });
   }

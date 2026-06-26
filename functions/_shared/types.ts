@@ -16,6 +16,11 @@ export interface Env {
   MAIL_SYSTEM_SYNC_SECRET?: string;
   MAIL_SYSTEM_SSO_SECRET?: string;
   MAIL_SYSTEM_SSO_URL?: string;
+  APPLE_CLIENT_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
+  APPLE_REDIRECT_URI?: string;
   NODE_ENV?: string;
 }
 

@@ -12,7 +12,7 @@ The app includes account registration/login, httpOnly JWT cookie sessions, D1-ba
 - Avatar storage: Cloudflare R2 binding `AVATARS`, reserved for a future upload route
 - Auth: signed JWT in an httpOnly cookie; D1 stores only the session token hash
 - Password hashing: Workers-compatible Web Crypto PBKDF2-SHA256
-- External auth: ChemVault Mail password compatibility and signed Mail SSO assertions
+- External auth: ChemVault Mail password compatibility, signed Mail SSO assertions, and Apple ID SSO
 
 ## Local Development
 
@@ -49,6 +49,13 @@ MAIL_SYSTEM_SYNC_SECRET="local-mail-sync-secret"
 MAIL_SYSTEM_SSO_SECRET="local-mail-sso-secret"
 # Optional, only after the mail system exposes an authorize endpoint:
 # MAIL_SYSTEM_SSO_URL="https://mail.chemvault.science/api/sso/authorize"
+
+# Optional, only after Apple Developer Sign in with Apple is configured:
+# APPLE_CLIENT_ID="science.chemvault.user"
+# APPLE_TEAM_ID="YOUR_APPLE_TEAM_ID"
+# APPLE_KEY_ID="YOUR_APPLE_KEY_ID"
+# APPLE_REDIRECT_URI="https://user.chemvault.science/api/auth/sso/apple/callback"
+# APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```
 
 Do not commit `.dev.vars`, real secrets, passwords, API keys, generated cookies, or generated admin SQL.
@@ -84,9 +91,21 @@ Set secrets outside source code:
 openssl rand -base64 48 | npx wrangler pages secret put JWT_SECRET --project-name chemvault-user
 npx wrangler pages secret put MAIL_SYSTEM_SYNC_SECRET --project-name chemvault-user
 npx wrangler pages secret put MAIL_SYSTEM_SSO_SECRET --project-name chemvault-user
+npx wrangler pages secret put APPLE_PRIVATE_KEY --project-name chemvault-user
 ```
 
 `MAIL_SYSTEM_SSO_SECRET` is optional when it intentionally shares the same value as `MAIL_SYSTEM_SYNC_SECRET`; the code falls back to the sync secret. Set `MAIL_SYSTEM_SSO_URL` as a non-secret Pages variable only after the mail system has a real SSO authorize endpoint.
+
+Apple ID login also needs these values after Apple Developer setup. They may be set as Cloudflare Pages variables in the dashboard, committed as non-secret `[vars]` only if appropriate for the environment, or set via the Pages secret command:
+
+```bash
+npx wrangler pages secret put APPLE_CLIENT_ID --project-name chemvault-user
+npx wrangler pages secret put APPLE_TEAM_ID --project-name chemvault-user
+npx wrangler pages secret put APPLE_KEY_ID --project-name chemvault-user
+npx wrangler pages secret put APPLE_REDIRECT_URI --project-name chemvault-user
+```
+
+`APPLE_PRIVATE_KEY` is a secret and must not be committed. If the private key is stored as one line, keep escaped `\n` line breaks; the Worker normalizes them at runtime.
 
 ## Database Setup And Migration
 
@@ -251,6 +270,35 @@ nonce
 ```
 
 Assertions expire after five minutes. A valid SSO callback upserts the main account, links the external mail identity, creates a default mail account if needed, and sets the normal User Center httpOnly session cookie. Until the mail system exposes the authorize endpoint, `/api/auth/sso/mail/start` redirects back to `/login?sso=mail_not_configured`.
+
+## Apple ID SSO
+
+The login and registration screens include "Continue with Apple ID". It starts at:
+
+```text
+GET /api/auth/sso/apple/start?returnTo=/dashboard
+```
+
+When Apple Developer configuration is present, User Center redirects to Apple's authorization endpoint with:
+
+- `client_id=APPLE_CLIENT_ID`
+- `redirect_uri=APPLE_REDIRECT_URI` or `https://user.chemvault.science/api/auth/sso/apple/callback`
+- `response_type=code`
+- `response_mode=form_post`
+- `scope=name email`
+- a signed state value using `JWT_SECRET`
+
+The callback exchanges the authorization code at Apple's token endpoint, verifies Apple's `id_token` signature against Apple's JWKS, checks issuer/audience/expiry claims, then links or creates a ChemVault main account using `external_identities` with `provider='apple'`.
+
+Required Apple Developer setup:
+
+1. Enable Sign in with Apple for the relevant Apple Developer account.
+2. Create or use a Services ID for the web client, for example `science.chemvault.user`.
+3. Add this Return URL exactly: `https://user.chemvault.science/api/auth/sso/apple/callback`.
+4. Create a Sign in with Apple private key and record `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and the downloaded private key.
+5. Configure Cloudflare Pages variables/secrets listed above, then redeploy.
+
+Until those values are configured, `/api/auth/sso/apple/start` redirects back to `/login?sso=apple_not_configured` instead of failing.
 
 ## Mail Admin Sync
 
@@ -453,6 +501,7 @@ Proxy status: Proxied
 - Login as admin and open `/admin`.
 - Login as a linked mail-system user with the existing mail password.
 - Open `/api/auth/sso/mail/start` and confirm it redirects to the mail SSO URL, or back to login with `sso=mail_not_configured` if the URL is intentionally unset.
+- Open `/api/auth/sso/apple/start` and confirm it redirects to Apple when Apple variables are configured, or back to login with `sso=apple_not_configured` if credentials are intentionally unset.
 - Open `/admin/users`, `/admin/permissions`, `/admin/mail`, `/admin/mail-sync`.
 - Give a user `page:file:view`, `service:chemvault_file`, and `file:read`.
 - Confirm `/api/access/check?service=chemvault_file&page=file` returns `allowed: true`.
@@ -475,8 +524,9 @@ Entitlement changes should mirror into `users.role`, `role_permissions`, or dedi
 
 - Do not store plaintext passwords.
 - Do not store raw session tokens in D1.
-- Do not commit `JWT_SECRET`, `MAIL_SYSTEM_SYNC_SECRET`, mail API keys, or generated admin SQL.
+- Do not commit `JWT_SECRET`, `MAIL_SYSTEM_SYNC_SECRET`, mail API keys, Apple private keys, or generated admin SQL.
 - Do not commit `MAIL_SYSTEM_SSO_SECRET`, imported mail password hashes, imported salts, or generated mail credential import SQL.
+- Do not commit `APPLE_PRIVATE_KEY`, Apple key downloads, Apple client secrets, callback codes, or captured Apple `id_token` values.
 - `owner` cannot be downgraded or deleted through admin APIs.
 - Ordinary admins cannot modify protected `super_admin`/`owner` accounts.
 - All admin permission, mail, role, and status operations write audit logs.
