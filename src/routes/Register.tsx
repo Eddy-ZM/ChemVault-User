@@ -118,8 +118,8 @@ export function Register() {
           </span>
         </label>
         <p className="text-xs leading-5 text-slate-500">
-          Continuing with Apple ID creates or signs into a ChemVault main account under the same Terms and Privacy
-          Policy.
+          Continuing with Apple Account creates or signs into a ChemVault main account under the same Terms and
+          Privacy Policy.
         </p>
         <button className="primary-button w-full justify-center" disabled={busy} type="submit">
           {busy ? (

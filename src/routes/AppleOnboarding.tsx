@@ -63,8 +63,8 @@ export function AppleOnboarding() {
           <div>
             <h1>Complete your ChemVault profile</h1>
             <p>
-              Your Apple ID is verified. Add the research identity details that ChemVault services and administrators
-              will use across the account system.
+              Your Apple Account is verified. Add the research identity details that ChemVault services and
+              administrators will use across the account system.
             </p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export function AppleOnboarding() {
             <span className="apple-signin-mark" aria-hidden="true">
               
             </span>
-            <span>Apple ID connected</span>
+            <span>Apple Account connected</span>
           </div>
           <p>{user.email}</p>
         </div>

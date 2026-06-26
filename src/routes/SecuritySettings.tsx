@@ -36,8 +36,8 @@ export function SecuritySettings() {
 
   useEffect(() => {
     if (searchParams.get("apple") === "linked") {
-      setMessage("Apple ID linked.");
-      notify({ title: "Apple ID linked", description: "You can now sign in to this account with Apple.", tone: "success" });
+      setMessage("Apple Account linked.");
+      notify({ title: "Apple Account linked", description: "You can now sign in to this account with Apple.", tone: "success" });
     }
   }, [notify, searchParams]);
 
@@ -178,12 +178,14 @@ export function SecuritySettings() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-slate-950">External sign-in</h2>
-            <p className="text-sm text-slate-500">Bind Apple ID to use Apple sign-in with this existing ChemVault account.</p>
+            <p className="text-sm text-slate-500">
+              Bind Apple Account to use Apple sign-in with this existing ChemVault account.
+            </p>
           </div>
         </div>
         <div className="external-identity-card">
           <div>
-            <p className="font-semibold text-slate-950">Apple ID</p>
+            <p className="font-semibold text-slate-950">Apple Account</p>
             <p className="mt-1 text-sm text-slate-500">
               {appleIdentity ? `Linked as ${appleIdentity.email}` : "Not linked yet. You will be sent to Apple to confirm ownership."}
             </p>
@@ -192,7 +194,7 @@ export function SecuritySettings() {
             <StatusBadge value="active" />
           ) : (
             <div className="w-full sm:w-72">
-              <AppleSignInButton mode="link" returnTo="/settings/security?apple=linked" label="Bind Apple ID" />
+              <AppleSignInButton mode="link" returnTo="/settings/security?apple=linked" label="Bind Apple Account" />
             </div>
           )}
         </div>

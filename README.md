@@ -12,7 +12,7 @@ The app includes account registration/login, httpOnly JWT cookie sessions, D1-ba
 - Avatar storage: Cloudflare R2 binding `AVATARS`, reserved for a future upload route
 - Auth: signed JWT in an httpOnly cookie; D1 stores only the session token hash
 - Password hashing: Workers-compatible Web Crypto PBKDF2-SHA256
-- External auth: ChemVault Mail password compatibility, signed Mail SSO assertions, and Apple ID SSO
+- External auth: ChemVault Mail password compatibility, signed Mail SSO assertions, and Apple Account SSO
 
 ## Local Development
 
@@ -96,7 +96,7 @@ npx wrangler pages secret put APPLE_PRIVATE_KEY --project-name chemvault-user
 
 `MAIL_SYSTEM_SSO_SECRET` is optional when it intentionally shares the same value as `MAIL_SYSTEM_SYNC_SECRET`; the code falls back to the sync secret. Set `MAIL_SYSTEM_SSO_URL` as a non-secret Pages variable only after the mail system has a real SSO authorize endpoint.
 
-Apple ID login also needs these values after Apple Developer setup. They may be set as Cloudflare Pages variables in the dashboard, committed as non-secret `[vars]` only if appropriate for the environment, or set via the Pages secret command:
+Apple Account login also needs these values after Apple Developer setup. They may be set as Cloudflare Pages variables in the dashboard, committed as non-secret `[vars]` only if appropriate for the environment, or set via the Pages secret command:
 
 ```bash
 npx wrangler pages secret put APPLE_CLIENT_ID --project-name chemvault-user
@@ -271,9 +271,9 @@ nonce
 
 Assertions expire after five minutes. A valid SSO callback upserts the main account, links the external mail identity, creates a default mail account if needed, and sets the normal User Center httpOnly session cookie. Until the mail system exposes the authorize endpoint, `/api/auth/sso/mail/start` redirects back to `/login?sso=mail_not_configured`.
 
-## Apple ID SSO
+## Apple Account SSO
 
-The login and registration screens include "Continue with Apple ID". It starts at:
+The login and registration screens include "Continue with Apple Account". It starts at:
 
 ```text
 GET /api/auth/sso/apple/start?returnTo=/dashboard
@@ -290,7 +290,7 @@ When Apple Developer configuration is present, User Center redirects to Apple's 
 
 The callback exchanges the authorization code at Apple's token endpoint, verifies Apple's `id_token` signature against Apple's JWKS, checks issuer/audience/expiry claims, then links or creates a ChemVault main account using `external_identities` with `provider='apple'`.
 
-Existing ChemVault users can bind Apple ID from `/settings/security`. The binding flow uses:
+Existing ChemVault users can bind Apple Account from `/settings/security`. The binding flow uses:
 
 ```text
 GET /api/auth/sso/apple/start?mode=link&returnTo=/settings/security?apple=linked

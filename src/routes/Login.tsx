@@ -21,9 +21,9 @@ export function Login() {
     searchParams.get("sso") === "mail_not_configured"
       ? "ChemVault Mail SSO is wired in User Center, but MAIL_SYSTEM_SSO_URL is not configured yet."
       : searchParams.get("sso") === "apple_not_configured"
-        ? "Apple ID login is wired in User Center, but Apple Developer credentials are not configured yet."
+        ? "Apple Account login is wired in User Center, but Apple Developer credentials are not configured yet."
         : searchParams.get("sso") === "apple_failed"
-          ? "Apple ID login could not be completed. Please try again or use email login."
+          ? "Apple Account login could not be completed. Please try again or use email login."
       : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

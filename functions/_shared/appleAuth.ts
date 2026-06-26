@@ -262,7 +262,7 @@ async function linkAppleIdentityToUser(
     .first<{ user_id: string }>();
 
   if (existing?.user_id && existing.user_id !== input.userId) {
-    throw new ApiError("VALIDATION_ERROR", "This Apple ID is already linked to another ChemVault account.", 409);
+    throw new ApiError("VALIDATION_ERROR", "This Apple Account is already linked to another ChemVault account.", 409);
   }
 
   await upsertAppleIdentity(env, {
