@@ -6,6 +6,7 @@ import { useAuth } from "../lib/auth";
 import { isEmail, passwordError, required } from "../lib/validators";
 import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
+import { ButtonSpinner } from "../components/UiPrimitives";
 
 export function Register() {
   const { register } = useAuth();
@@ -98,8 +99,14 @@ export function Register() {
           I agree to the Terms of Service and Privacy Policy.
         </label>
         <button className="primary-button w-full justify-center" disabled={busy} type="submit">
-          <UserPlus className="h-4 w-4" />
-          {busy ? "Creating account..." : "Create account"}
+          {busy ? (
+            <ButtonSpinner label="Creating account..." />
+          ) : (
+            <>
+              <UserPlus className="h-4 w-4" />
+              Create account
+            </>
+          )}
         </button>
         <p className="text-center text-sm text-slate-500">
           Already registered?{" "}

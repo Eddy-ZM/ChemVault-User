@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { ButtonSpinner } from "./UiPrimitives";
 
 interface ModalProps {
   open: boolean;
@@ -31,8 +32,8 @@ export function Modal({ open, title, description, onClose, children, footer, siz
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className={`max-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card ${sizeClass[size]}`}>
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className={`modal-panel ${sizeClass[size]}`}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
@@ -85,7 +86,7 @@ export function ConfirmDialog({
             {cancelLabel}
           </button>
           <button className={tone === "danger" ? "danger-button" : "primary-button"} type="button" onClick={onConfirm} disabled={busy}>
-            {busy ? "Working..." : confirmLabel}
+            {busy ? <ButtonSpinner label="Working..." /> : confirmLabel}
           </button>
         </>
       }

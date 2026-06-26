@@ -5,6 +5,7 @@ import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type { User } from "../lib/types";
 import { useToast } from "../components/Toast";
+import { ButtonSpinner } from "../components/UiPrimitives";
 
 export function ProfileSettings() {
   const { notify } = useToast();
@@ -119,8 +120,14 @@ export function ProfileSettings() {
           <textarea name="bio" defaultValue={user.bio || ""} rows={5} />
         </label>
         <button className="primary-button w-fit" type="submit" disabled={saving}>
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save profile"}
+          {saving ? (
+            <ButtonSpinner label="Saving..." />
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              Save profile
+            </>
+          )}
         </button>
       </form>
     </section>

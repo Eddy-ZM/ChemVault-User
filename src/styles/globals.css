@@ -29,6 +29,14 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer components {
   .app-shell {
     @apply flex min-h-screen flex-col bg-slate-50/80 lg:flex-row;
@@ -36,6 +44,7 @@ textarea {
 
   .sidebar {
     @apply fixed inset-y-0 left-0 z-30 flex w-[min(88vw,320px)] shrink-0 flex-col border-r border-slate-200 bg-white/95 p-4 shadow-card backdrop-blur transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-[272px] lg:translate-x-0 lg:p-5 lg:shadow-none;
+    animation: panel-slide-in 260ms ease-out;
   }
 
   .brand-block {
@@ -87,11 +96,16 @@ textarea {
   }
 
   .nav-item {
-    @apply flex h-10 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-600 transition hover:bg-blue-50 hover:text-blue-700;
+    @apply relative flex h-10 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-600 transition hover:bg-blue-50 hover:text-blue-700;
   }
 
   .nav-item-active {
     @apply bg-blue-50 text-blue-700;
+  }
+
+  .nav-item-active::before {
+    @apply absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-blue-700;
+    content: "";
   }
 
   .topbar {
@@ -110,6 +124,7 @@ textarea {
     @apply w-full max-w-6xl rounded-lg border border-white/70 bg-white/75 p-5 shadow-card backdrop-blur md:p-9;
     width: calc(100vw - 2.5rem);
     max-width: 72rem;
+    animation: page-reveal 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .gateway-grid {
@@ -136,6 +151,7 @@ textarea {
     @apply grid w-full max-w-md gap-5 rounded-lg border border-slate-200 bg-white p-6 shadow-card;
     width: calc(100vw - 2.5rem);
     max-width: 28rem;
+    animation: page-reveal 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .auth-card-wide {
@@ -156,11 +172,19 @@ textarea {
   }
 
   .card {
-    @apply rounded-lg border border-slate-200 bg-white p-5 shadow-sm;
+    @apply rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition;
+    transition-duration: 180ms;
+    transition-property: border-color, box-shadow, transform, background-color;
+  }
+
+  .card:hover {
+    @apply border-cyan-200 shadow-card;
+    transform: translateY(-2px);
   }
 
   .dashboard-hero {
     @apply rounded-lg border border-white/60 bg-gradient-to-br from-white via-slate-50 to-cyan-50 p-5 shadow-card md:p-7;
+    animation: page-reveal 500ms ease-out;
   }
 
   .section-heading {
@@ -181,19 +205,33 @@ textarea {
   }
 
   .primary-button {
-    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-700 bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply relative inline-flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg border border-blue-700 bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60;
+    transition-property: background-color, border-color, color, box-shadow, transform;
   }
 
   .secondary-button {
-    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:text-blue-700;
+    @apply relative inline-flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:text-blue-700;
+    transition-property: background-color, border-color, color, box-shadow, transform;
   }
 
   .danger-button {
-    @apply inline-flex h-10 items-center gap-2 rounded-lg border border-red-700 bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800;
+    @apply relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-lg border border-red-700 bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800;
+    transition-property: background-color, border-color, color, box-shadow, transform;
   }
 
   .icon-button {
-    @apply grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700;
+    @apply relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700;
+    transition-property: background-color, border-color, color, box-shadow, transform;
+  }
+
+  .primary-button:hover,
+  .secondary-button:hover,
+  .danger-button:hover,
+  .icon-button:hover,
+  .icon-link:hover,
+  .button-danger-icon:hover {
+    @apply shadow-sm;
+    transform: translateY(-1px);
   }
 
   .form-grid {
@@ -201,7 +239,13 @@ textarea {
   }
 
   .settings-panel {
-    @apply grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm;
+    @apply grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition;
+    transition-duration: 180ms;
+    transition-property: border-color, box-shadow;
+  }
+
+  .settings-panel:hover {
+    @apply border-slate-300 shadow-card;
   }
 
   .danger-panel {
@@ -224,6 +268,13 @@ textarea {
   select,
   textarea {
     @apply min-h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100;
+    transition-property: border-color, box-shadow, background-color, transform;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    transform: translateY(-1px);
   }
 
   textarea {
@@ -248,14 +299,17 @@ textarea {
 
   .alert-error {
     @apply rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800;
+    animation: alert-in 240ms ease-out;
   }
 
   .alert-success {
     @apply rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800;
+    animation: alert-in 240ms ease-out;
   }
 
   .alert-info {
     @apply rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900;
+    animation: alert-in 240ms ease-out;
   }
 
   .badge-muted,
@@ -272,11 +326,11 @@ textarea {
   }
 
   .icon-link {
-    @apply grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700;
+    @apply relative grid h-9 w-9 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700;
   }
 
   .button-danger-icon {
-    @apply grid h-9 w-9 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:border-red-300 hover:bg-red-100;
+    @apply relative grid h-9 w-9 place-items-center overflow-hidden rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:border-red-300 hover:bg-red-100;
   }
 
   .detail-list {
@@ -297,6 +351,11 @@ textarea {
 
   .segment-button {
     @apply h-8 rounded-md px-3 text-xs font-semibold text-slate-500 transition hover:text-slate-900;
+    transition-property: background-color, color, box-shadow, transform;
+  }
+
+  .segment-button:active {
+    transform: scale(0.98);
   }
 
   .segment-active {
@@ -321,6 +380,12 @@ textarea {
 
   .status-active {
     @apply bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100;
+  }
+
+  .status-active::before {
+    content: "";
+    @apply mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500;
+    animation: status-pulse 1.8s ease-in-out infinite;
   }
 
   .status-soon {
@@ -348,7 +413,13 @@ textarea {
   }
 
   .plan-card {
-    @apply grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm;
+    @apply grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition;
+    transition-property: border-color, box-shadow, transform;
+  }
+
+  .plan-card:hover {
+    @apply border-cyan-200 shadow-card;
+    transform: translateY(-2px);
   }
 
   .plan-card-active {
@@ -370,6 +441,7 @@ textarea {
 
   .empty-state {
     @apply grid min-h-[360px] place-items-center content-center gap-3 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm;
+    animation: page-reveal 420ms ease-out;
   }
 
   .empty-state h1 {
@@ -385,6 +457,7 @@ textarea {
     background:
       linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.98) 58%, rgba(21, 32, 56, 0.98) 100%),
       linear-gradient(90deg, rgba(34, 211, 238, 0.16), rgba(245, 158, 11, 0.12));
+    animation: footer-rise 520ms ease-out;
   }
 
   .user-system-footer-compact {
@@ -410,7 +483,12 @@ textarea {
   }
 
   .user-system-footer-pillar {
-    @apply flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-300;
+    @apply flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-300 transition;
+  }
+
+  .user-system-footer-pillar:hover {
+    @apply border-cyan-300/40 bg-white/[0.075] text-white;
+    transform: translateY(-1px);
   }
 
   .user-system-footer-pillar svg {
@@ -437,6 +515,16 @@ textarea {
     @apply border-b border-slate-100 px-3 py-3 align-middle text-slate-700;
   }
 
+  tbody tr {
+    @apply transition;
+    transition-property: background-color, box-shadow, transform;
+  }
+
+  tbody tr:hover {
+    @apply bg-cyan-50/50;
+    box-shadow: inset 3px 0 0 rgba(14, 116, 144, 0.35);
+  }
+
   td strong,
   td span {
     @apply block;
@@ -444,5 +532,203 @@ textarea {
 
   td span {
     @apply mt-1 text-xs text-slate-500;
+  }
+
+  .page-transition {
+    animation: page-reveal 340ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .route-progress {
+    @apply fixed left-0 top-0 z-[70] h-0.5 w-full origin-left scale-x-0 bg-cyan-400 opacity-0 shadow-[0_0_18px_rgba(34,211,238,0.65)];
+    transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+  }
+
+  .route-progress-active {
+    @apply scale-x-100 opacity-100;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-40 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-sm;
+    animation: backdrop-in 180ms ease-out;
+  }
+
+  .modal-panel {
+    @apply max-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card;
+    animation: modal-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .toast-card {
+    animation: toast-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .save-bar {
+    @apply sticky bottom-4 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 text-sm font-semibold text-slate-700 shadow-card backdrop-blur;
+    animation: save-bar-in 240ms ease-out;
+  }
+
+  .loading-block {
+    @apply grid min-h-[220px] place-items-center content-center gap-3 rounded-lg border border-slate-200 bg-white/70 p-6 text-center;
+    animation: page-reveal 320ms ease-out;
+  }
+
+  .loading-block p {
+    @apply text-sm font-semibold text-slate-500;
+  }
+
+  .loading-orbit {
+    @apply relative grid h-12 w-12 place-items-center rounded-full bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100;
+  }
+
+  .loading-orbit span {
+    @apply absolute inset-0 rounded-full border border-cyan-300/60;
+    animation: loading-orbit-pulse 1.6s ease-out infinite;
+  }
+
+  .loading-skeleton {
+    @apply mt-2 grid w-full max-w-xs gap-2;
+  }
+
+  .loading-skeleton span {
+    @apply h-2 rounded-full bg-slate-200;
+    background-image: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 48%, #e2e8f0 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.35s ease-in-out infinite;
+  }
+
+  .loading-skeleton span:nth-child(2) {
+    @apply mx-auto w-4/5;
+    animation-delay: 120ms;
+  }
+
+  .loading-skeleton span:nth-child(3) {
+    @apply mx-auto w-2/3;
+    animation-delay: 240ms;
+  }
+}
+
+@keyframes page-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes footer-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes save-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes loading-orbit-pulse {
+  from {
+    opacity: 0.65;
+    transform: scale(0.78);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

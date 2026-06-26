@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Braces, RefreshCw, UploadCloud } from "lucide-react";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useToast } from "../components/Toast";
+import { ButtonSpinner } from "../components/UiPrimitives";
 
 const exampleJson = JSON.stringify(
   {
@@ -92,7 +93,9 @@ export function MailSync() {
           />
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" className="secondary-button" onClick={formatJson} disabled={busy}><Braces className="h-4 w-4" />Format JSON</button>
-            <button type="button" className="primary-button" onClick={() => void manualSync()} disabled={busy}><UploadCloud className="h-4 w-4" />{busy ? "Syncing..." : "Sync JSON"}</button>
+            <button type="button" className="primary-button" onClick={() => void manualSync()} disabled={busy}>
+              {busy ? <ButtonSpinner label="Syncing..." /> : <><UploadCloud className="h-4 w-4" />Sync JSON</>}
+            </button>
             <button type="button" className="secondary-button" onClick={() => void runSync()} disabled={busy}><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />Run API sync</button>
           </div>
         </div>

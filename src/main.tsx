@@ -23,6 +23,7 @@ import { PageAccessEditor } from "./routes/PageAccessEditor";
 import { MailAccountManager } from "./routes/MailAccountManager";
 import { MailSync } from "./routes/MailSync";
 import { ToastProvider } from "./components/Toast";
+import { GlobalInteractions } from "./components/GlobalInteractions";
 import "./styles/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <AuthProvider>
         <ToastProvider>
+          <GlobalInteractions />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />

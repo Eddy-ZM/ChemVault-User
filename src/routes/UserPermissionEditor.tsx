@@ -3,7 +3,7 @@ import { RotateCcw, Save } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { PermissionDefinition, PermissionEffect, PermissionGrant } from "../lib/types";
-import { LoadingBlock, SaveBar, StatusBadge } from "../components/UiPrimitives";
+import { ButtonSpinner, LoadingBlock, SaveBar, StatusBadge } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
 type LocalEffect = PermissionEffect | "inherit";
@@ -124,7 +124,9 @@ export function UserPermissionEditor() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="secondary-button" onClick={resetDraft} disabled={!dirtyCount || saving}><RotateCcw className="h-4 w-4" />Reset</button>
-          <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirtyCount || saving}><Save className="h-4 w-4" />{saving ? "Saving..." : "Save"}</button>
+          <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirtyCount || saving}>
+            {saving ? <ButtonSpinner label="Saving..." /> : <><Save className="h-4 w-4" />Save</>}
+          </button>
         </div>
       </div>
       {message ? <div className="alert-success">{message}</div> : null}

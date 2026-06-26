@@ -3,7 +3,7 @@ import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal } from "lucide-rea
 import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { MailAccount, MailRole, SystemRole, User, UserRole, UserStatus } from "../lib/types";
-import { EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
+import { ButtonSpinner, EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
 import { Modal } from "../components/Modal";
 import { useToast } from "../components/Toast";
 
@@ -255,7 +255,9 @@ export function UserManagement() {
         footer={
           <>
             <button className="secondary-button" type="button" onClick={() => setMailTarget(null)} disabled={mailSaving}>Cancel</button>
-            <button className="primary-button" type="submit" form="quick-mailbox-form" disabled={mailSaving}>{mailSaving ? "Assigning..." : "Assign mailbox"}</button>
+            <button className="primary-button" type="submit" form="quick-mailbox-form" disabled={mailSaving}>
+              {mailSaving ? <ButtonSpinner label="Assigning..." /> : "Assign mailbox"}
+            </button>
           </>
         }
       >

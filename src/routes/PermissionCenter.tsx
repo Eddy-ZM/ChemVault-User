@@ -3,7 +3,7 @@ import { Plus, Search } from "lucide-react";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { PermissionDefinition } from "../lib/types";
 import { Modal } from "../components/Modal";
-import { EmptyState, LoadingBlock } from "../components/UiPrimitives";
+import { ButtonSpinner, EmptyState, LoadingBlock } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
 export function PermissionCenter() {
@@ -163,7 +163,9 @@ export function PermissionCenter() {
         footer={
           <>
             <button className="secondary-button" type="button" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button>
-            <button className="primary-button" type="submit" form="create-permission-form" disabled={creating}>{creating ? "Creating..." : "Create permission"}</button>
+            <button className="primary-button" type="submit" form="create-permission-form" disabled={creating}>
+              {creating ? <ButtonSpinner label="Creating..." /> : "Create permission"}
+            </button>
           </>
         }
       >

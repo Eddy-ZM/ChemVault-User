@@ -3,7 +3,7 @@ import { RotateCcw, Save } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { AccessStatus, CatalogEntry, PageAccess } from "../lib/types";
-import { LoadingBlock, SaveBar, StatusBadge } from "../components/UiPrimitives";
+import { ButtonSpinner, LoadingBlock, SaveBar, StatusBadge } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
 const statuses: AccessStatus[] = ["active", "disabled", "suspended"];
@@ -82,7 +82,9 @@ export function PageAccessEditor() {
         <div className="flex flex-wrap gap-2">
           <Link to={`/admin/users/${id}`} className="secondary-button">Back to user</Link>
           <button type="button" className="secondary-button" onClick={() => setDraft(savedDraft)} disabled={!dirtyCount || saving}><RotateCcw className="h-4 w-4" />Reset</button>
-          <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirtyCount || saving}><Save className="h-4 w-4" />{saving ? "Saving..." : "Save"}</button>
+          <button type="button" className="primary-button" onClick={() => void save()} disabled={!dirtyCount || saving}>
+            {saving ? <ButtonSpinner label="Saving..." /> : <><Save className="h-4 w-4" />Save</>}
+          </button>
         </div>
       </div>
       {message ? <div className="alert-success">{message}</div> : null}

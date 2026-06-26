@@ -20,10 +20,27 @@ export function StatusBadge({ value }: { value: StatusValue }) {
 
 export function LoadingBlock({ label = "Loading..." }: { label?: string }) {
   return (
-    <div className="grid min-h-[220px] place-items-center content-center gap-3 text-center">
-      <Loader2 className="h-6 w-6 animate-spin text-cyan-700" />
-      <p className="text-sm font-semibold text-slate-500">{label}</p>
+    <div className="loading-block">
+      <div className="loading-orbit" aria-hidden="true">
+        <span />
+        <Loader2 className="h-5 w-5 animate-spin text-cyan-700" />
+      </div>
+      <p>{label}</p>
+      <div className="loading-skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
     </div>
+  );
+}
+
+export function ButtonSpinner({ label = "Working..." }: { label?: string }) {
+  return (
+    <>
+      <Loader2 className="h-4 w-4 animate-spin" />
+      {label}
+    </>
   );
 }
 
@@ -60,13 +77,13 @@ export function SaveBar({
   if (!dirtyCount) return null;
 
   return (
-    <div className="sticky bottom-4 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 text-sm font-semibold text-slate-700 shadow-card backdrop-blur">
+    <div className="save-bar">
       <span>{dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}</span>
       <button className="secondary-button h-9" type="button" onClick={onReset} disabled={saving}>
         Reset
       </button>
       <button className="primary-button h-9" type="button" onClick={onSave} disabled={saving}>
-        {saving ? "Saving..." : "Save changes"}
+        {saving ? <ButtonSpinner label="Saving..." /> : "Save changes"}
       </button>
     </div>
   );

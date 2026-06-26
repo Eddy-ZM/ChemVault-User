@@ -3,7 +3,7 @@ import { Edit3, Mail, Plus, Search, Trash2 } from "lucide-react";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { MailAccount, MailRole, MailStatus, User } from "../lib/types";
 import { ConfirmDialog, Modal } from "../components/Modal";
-import { EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
+import { ButtonSpinner, EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
 const mailRoles: MailRole[] = ["mailbox_user", "mailbox_admin", "mailbox_super"];
@@ -250,7 +250,7 @@ export function MailAccountManager() {
           <>
             <button className="secondary-button" type="button" onClick={() => setModalOpen(false)} disabled={Boolean(savingId)}>Cancel</button>
             <button className="primary-button" type="submit" form="mail-account-form" disabled={Boolean(savingId)}>
-              {savingId ? "Saving..." : editingAccount ? "Save mailbox" : "Assign mailbox"}
+              {savingId ? <ButtonSpinner label="Saving..." /> : editingAccount ? "Save mailbox" : "Assign mailbox"}
             </button>
           </>
         }

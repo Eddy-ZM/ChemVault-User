@@ -6,6 +6,7 @@ import { useAuth } from "../lib/auth";
 import { passwordError } from "../lib/validators";
 import { ConfirmDialog } from "../components/Modal";
 import { useToast } from "../components/Toast";
+import { ButtonSpinner } from "../components/UiPrimitives";
 
 export function SecuritySettings() {
   const { notify } = useToast();
@@ -110,7 +111,7 @@ export function SecuritySettings() {
               {showPasswords ? "Hide passwords" : "Show passwords"}
             </button>
             <button className="primary-button" type="submit" disabled={savingPassword}>
-              {savingPassword ? "Updating..." : "Update password"}
+              {savingPassword ? <ButtonSpinner label="Updating..." /> : "Update password"}
             </button>
           </div>
         </form>

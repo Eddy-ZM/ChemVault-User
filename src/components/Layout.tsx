@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -8,6 +8,7 @@ import { UserSystemFooter } from "./UserSystemFooter";
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -25,7 +26,7 @@ export function Layout() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setSidebarOpen(true)} onCommand={() => setCommandOpen(true)} />
-        <div className="flex-1">
+        <div key={location.pathname} className="page-transition flex-1">
           <Outlet />
         </div>
         <UserSystemFooter />

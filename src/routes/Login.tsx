@@ -6,6 +6,7 @@ import { useAuth } from "../lib/auth";
 import { isEmail, required } from "../lib/validators";
 import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
+import { ButtonSpinner } from "../components/UiPrimitives";
 
 export function Login() {
   const { login } = useAuth();
@@ -68,8 +69,14 @@ export function Login() {
           Remember me
         </label>
         <button className="primary-button w-full justify-center" disabled={busy} type="submit">
-          <LogIn className="h-4 w-4" />
-          {busy ? "Logging in..." : "Login"}
+          {busy ? (
+            <ButtonSpinner label="Logging in..." />
+          ) : (
+            <>
+              <LogIn className="h-4 w-4" />
+              Login
+            </>
+          )}
         </button>
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />

@@ -56,7 +56,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex gap-3 rounded-lg border p-4 shadow-card backdrop-blur ${style.className}`}
+              className={`toast-card pointer-events-auto flex gap-3 rounded-lg border p-4 shadow-card backdrop-blur ${style.className}`}
               role="status"
             >
               <Icon className="mt-0.5 h-5 w-5 shrink-0" />
