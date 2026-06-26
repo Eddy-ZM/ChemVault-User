@@ -1,5 +1,6 @@
 import { BarChart3, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Mail, Network, Shield, UserRound, UsersRound } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "../lib/auth";
 
 const navItems = [
@@ -10,12 +11,24 @@ const navItems = [
   { to: "/services", label: "Connected Services", icon: Network },
 ] as const;
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
+  const location = useLocation();
   const isAdmin = user?.role === "admin" || ["admin", "super_admin", "owner"].includes(user?.systemRole || "");
 
+  useEffect(() => {
+    onClose();
+  }, [location.pathname]);
+
   return (
-    <aside className="sidebar">
+    <>
+      <button
+        className={`fixed inset-0 z-20 bg-slate-950/30 transition lg:hidden ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        type="button"
+        aria-label="Close navigation"
+        onClick={onClose}
+      />
+      <aside className={`sidebar ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
       <NavLink to="/dashboard" className="brand-block">
         <div className="brand-mark">CV</div>
         <div>
@@ -23,7 +36,7 @@ export function Sidebar() {
           <span>User Center</span>
         </div>
       </NavLink>
-      <nav className="mt-5 flex gap-2 overflow-x-auto pb-1 lg:mt-7 lg:grid lg:overflow-visible lg:pb-0">
+      <nav className="mt-5 grid gap-2 overflow-y-auto pb-1 lg:mt-7 lg:overflow-visible lg:pb-0">
         {navItems.map((item) => (
           <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-item ${isActive ? "nav-item-active" : ""}`}>
             <item.icon className="h-4 w-4" />
@@ -48,6 +61,10 @@ export function Sidebar() {
             <Mail className="h-4 w-4" />
             Mail
           </NavLink>
+          <NavLink to="/admin/mail-sync" className={({ isActive }) => `nav-item ${isActive ? "nav-item-active" : ""}`}>
+            <Mail className="h-4 w-4" />
+            Mail Sync
+          </NavLink>
           </>
         ) : null}
       </nav>
@@ -59,5 +76,6 @@ export function Sidebar() {
         Shared identity for app, files, extraction, molecule, and notifications.
       </div>
     </aside>
+    </>
   );
 }

@@ -1,15 +1,18 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
-import { Save, Upload } from "lucide-react";
+import { RotateCcw, Save, Upload } from "lucide-react";
 import { UserAvatar } from "../components/UserAvatar";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type { User } from "../lib/types";
+import { useToast } from "../components/Toast";
 
 export function ProfileSettings() {
+  const { notify } = useToast();
   const { user, setUser } = useAuth();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setAvatarPreview(user?.avatarUrl || null);
@@ -29,6 +32,7 @@ export function ProfileSettings() {
     event.preventDefault();
     setError("");
     setMessage("");
+    setSaving(true);
     const form = new FormData(event.currentTarget);
 
     try {
@@ -46,8 +50,13 @@ export function ProfileSettings() {
       });
       setUser(body.user);
       setMessage("Profile updated.");
+      notify({ title: "Profile updated", tone: "success" });
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Profile update failed.");
+      const message = err instanceof ApiClientError ? err.message : "Profile update failed.";
+      setError(message);
+      notify({ title: "Profile update failed", description: message, tone: "error" });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -75,6 +84,10 @@ export function ProfileSettings() {
             Upload
             <input className="sr-only" accept="image/*" type="file" onChange={handleAvatar} />
           </label>
+          <button className="secondary-button" type="button" onClick={() => setAvatarPreview(null)}>
+            <RotateCcw className="h-4 w-4" />
+            Clear
+          </button>
         </div>
         <div className="form-grid">
           <label>
@@ -105,9 +118,9 @@ export function ProfileSettings() {
           Bio
           <textarea name="bio" defaultValue={user.bio || ""} rows={5} />
         </label>
-        <button className="primary-button w-fit" type="submit">
+        <button className="primary-button w-fit" type="submit" disabled={saving}>
           <Save className="h-4 w-4" />
-          Save profile
+          {saving ? "Saving..." : "Save profile"}
         </button>
       </form>
     </section>

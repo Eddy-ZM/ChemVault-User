@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { AuditLog, MailAccount, PageAccess, PermissionGrant, ServiceAccess, User } from "../lib/types";
+import { LoadingBlock, StatusBadge } from "../components/UiPrimitives";
+import { useToast } from "../components/Toast";
 
 interface UserDetailResponse {
   user: User;
@@ -16,18 +19,35 @@ interface UserDetailResponse {
 
 export function UserDetail() {
   const { id } = useParams();
+  const { notify } = useToast();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
+  const [expandedLogId, setExpandedLogId] = useState("");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  async function load(showToast = false) {
     if (!id) return;
-    apiRequest<UserDetailResponse>(`/api/admin/users/${id}`)
-      .then(setDetail)
-      .catch((err) => setError(err instanceof ApiClientError ? err.message : "User detail failed to load."));
+    try {
+      setLoading(true);
+      const body = await apiRequest<UserDetailResponse>(`/api/admin/users/${id}`);
+      setDetail(body);
+      setError("");
+      if (showToast) notify({ title: "User detail refreshed", tone: "success" });
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "User detail failed to load.";
+      setError(message);
+      notify({ title: "User detail failed to load", description: message, tone: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
   }, [id]);
 
   if (error) return <section className="page-section"><div className="alert-error">{error}</div></section>;
-  if (!detail) return <section className="page-section"><div className="settings-panel">Loading user detail...</div></section>;
+  if (!detail) return <section className="page-section"><LoadingBlock label="Loading user detail..." /></section>;
 
   return (
     <section className="page-section">
@@ -38,6 +58,10 @@ export function UserDetail() {
           <p className="text-sm text-slate-500">{detail.user.email}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button className="secondary-button" type="button" onClick={() => void load(true)} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
           <Link className="secondary-button" to={`/admin/users/${detail.user.id}/permissions`}>Permissions</Link>
           <Link className="secondary-button" to={`/admin/users/${detail.user.id}/services`}>Services</Link>
           <Link className="secondary-button" to={`/admin/users/${detail.user.id}/pages`}>Pages</Link>
@@ -48,9 +72,9 @@ export function UserDetail() {
         <div className="settings-panel">
           <h2 className="text-lg font-semibold text-slate-950">Identity</h2>
           <dl className="detail-list">
-            <dt>Account role</dt><dd>{detail.user.role}</dd>
-            <dt>System role</dt><dd>{detail.user.systemRole}</dd>
-            <dt>Status</dt><dd>{detail.user.globalStatus}</dd>
+            <dt>Account role</dt><dd><StatusBadge value={detail.user.role} /></dd>
+            <dt>System role</dt><dd><StatusBadge value={detail.user.systemRole} /></dd>
+            <dt>Status</dt><dd><StatusBadge value={detail.user.globalStatus} /></dd>
             <dt>Source</dt><dd>{detail.user.source}</dd>
             <dt>Institution</dt><dd>{detail.user.institution || "-"}</dd>
             <dt>Joined</dt><dd>{new Date(detail.user.createdAt).toLocaleDateString()}</dd>
@@ -62,8 +86,8 @@ export function UserDetail() {
           {detail.mailAccount ? (
             <dl className="detail-list">
               <dt>Address</dt><dd>{detail.mailAccount.mailAddress}</dd>
-              <dt>Role</dt><dd>{detail.mailAccount.mailRole}</dd>
-              <dt>Status</dt><dd>{detail.mailAccount.mailStatus}</dd>
+              <dt>Role</dt><dd><StatusBadge value={detail.mailAccount.mailRole} /></dd>
+              <dt>Status</dt><dd><StatusBadge value={detail.mailAccount.mailStatus} /></dd>
               <dt>Quota</dt><dd>{detail.mailAccount.mailboxQuotaMb} MB</dd>
               <dt>Aliases</dt><dd>{detail.mailAccount.aliases.join(", ") || "-"}</dd>
             </dl>
@@ -92,10 +116,18 @@ export function UserDetail() {
         <h2 className="text-lg font-semibold text-slate-950">Audit log</h2>
         <div className="mt-3 space-y-3">
           {detail.auditLogs.length ? detail.auditLogs.map((log) => (
-            <div key={log.id} className="rounded-lg border border-slate-200 p-3 text-sm">
-              <strong>{log.action}</strong>
-              <div className="text-slate-500">{new Date(log.createdAt).toLocaleString()}</div>
-            </div>
+            <button key={log.id} className="w-full rounded-lg border border-slate-200 p-3 text-left text-sm transition hover:border-cyan-200 hover:bg-cyan-50" type="button" onClick={() => setExpandedLogId((current) => current === log.id ? "" : log.id)}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <strong>{log.action}</strong>
+                  <div className="text-slate-500">{new Date(log.createdAt).toLocaleString()}</div>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-slate-400 transition ${expandedLogId === log.id ? "rotate-180" : ""}`} />
+              </div>
+              {expandedLogId === log.id ? (
+                <pre className="mt-3 max-h-44 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-50">{JSON.stringify(log.details || {}, null, 2)}</pre>
+              ) : null}
+            </button>
           )) : <p className="text-sm text-slate-500">No audit events for this user.</p>}
         </div>
       </div>

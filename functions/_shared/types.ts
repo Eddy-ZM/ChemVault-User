@@ -14,6 +14,8 @@ export interface Env {
   COOKIE_NAME?: string;
   JWT_SECRET?: string;
   MAIL_SYSTEM_SYNC_SECRET?: string;
+  MAIL_SYSTEM_SSO_SECRET?: string;
+  MAIL_SYSTEM_SSO_URL?: string;
   NODE_ENV?: string;
 }
 
@@ -122,4 +124,18 @@ export interface PublicMailAccount {
   aliases: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ExternalIdentityRow {
+  id: string;
+  user_id: string;
+  provider: string;
+  provider_user_id: string | null;
+  provider_email: string;
+  credential_hash: string | null;
+  credential_salt: string | null;
+  credential_algorithm: string | null;
+  metadata: string | null;
+  created_at: string;
+  updated_at: string;
 }

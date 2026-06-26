@@ -1,23 +1,45 @@
 import { useEffect, useState } from "react";
-import { Activity, Database, FlaskConical, KeyRound, Server } from "lucide-react";
+import { Activity, Database, FlaskConical, RefreshCw, Server } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ServiceCard } from "../components/ServiceCard";
 import { StatCard } from "../components/StatCard";
 import { UserAvatar } from "../components/UserAvatar";
-import { apiRequest } from "../lib/api";
+import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type { ConnectedService, UsageResponse } from "../lib/types";
+import { EmptyState, LoadingBlock } from "../components/UiPrimitives";
+import { useToast } from "../components/Toast";
 
 export function Dashboard() {
+  const { notify } = useToast();
   const { user } = useAuth();
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [services, setServices] = useState<ConnectedService[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function load(showToast = false) {
+    try {
+      setLoading(true);
+      const [usageBody, serviceBody] = await Promise.all([
+        apiRequest<UsageResponse>("/api/user/usage"),
+        apiRequest<{ services: ConnectedService[] }>("/api/user/services"),
+      ]);
+      setUsage(usageBody);
+      setServices(serviceBody.services);
+      setError("");
+      if (showToast) notify({ title: "Dashboard refreshed", tone: "success" });
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "Dashboard failed to load.";
+      setError(message);
+      notify({ title: "Dashboard failed to load", description: message, tone: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    void Promise.all([
-      apiRequest<UsageResponse>("/api/user/usage").then(setUsage),
-      apiRequest<{ services: ConnectedService[] }>("/api/user/services").then((body) => setServices(body.services)),
-    ]);
+    void load();
   }, []);
 
   if (!user) return null;
@@ -49,6 +71,7 @@ export function Dashboard() {
           <ProfileFact label="Joined" value={joined} />
         </div>
       </div>
+      {error ? <div className="alert-error">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <StatCard
@@ -76,13 +99,17 @@ export function Dashboard() {
           <p className="label">Connected ChemVault services</p>
           <h2>Product access</h2>
         </div>
-        <Activity className="h-5 w-5 text-cyan-700" />
+        <button className="secondary-button" type="button" onClick={() => void load(true)} disabled={loading}>
+          {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+          Refresh
+        </button>
       </div>
-      <div className="service-grid">
+      {loading ? <LoadingBlock label="Loading services..." /> : <div className="service-grid">
         {services.map((service) => (
           <ServiceCard key={service.service} service={service} />
         ))}
-      </div>
+      </div>}
+      {!loading && !services.length ? <EmptyState title="No services connected" description="ChemVault services will appear here after an administrator grants access." /> : null}
     </section>
   );
 }

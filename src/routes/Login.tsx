@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
-import { ArrowLeft, LogIn } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, LogIn, Mail } from "lucide-react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { isEmail, required } from "../lib/validators";
@@ -9,9 +9,14 @@ export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const from = (location.state as { from?: string } | null)?.from || "/dashboard";
+  const ssoMessage =
+    searchParams.get("sso") === "mail_not_configured"
+      ? "ChemVault Mail SSO is wired in User Center, but MAIL_SYSTEM_SSO_URL is not configured yet."
+      : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,6 +52,7 @@ export function Login() {
           <p>Use your ChemVault identity to enter the unified user dashboard.</p>
         </div>
         {error ? <div className="alert-error">{error}</div> : null}
+        {ssoMessage ? <div className="alert-info">{ssoMessage}</div> : null}
         <label>
           Email
           <input name="email" autoComplete="email" type="email" required />
@@ -63,6 +69,15 @@ export function Login() {
           <LogIn className="h-4 w-4" />
           {busy ? "Logging in..." : "Login"}
         </button>
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          or
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+        <a className="secondary-button w-full justify-center" href={`/api/auth/sso/mail/start?returnTo=${encodeURIComponent(from)}`}>
+          <Mail className="h-4 w-4" />
+          Continue with ChemVault Mail
+        </a>
         <p className="text-center text-sm text-slate-500">
           New to ChemVault?{" "}
           <Link className="font-semibold text-blue-700" to="/register">

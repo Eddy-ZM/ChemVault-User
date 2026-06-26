@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { RefreshCw, UploadCloud } from "lucide-react";
+import { Braces, RefreshCw, UploadCloud } from "lucide-react";
 import { ApiClientError, apiRequest } from "../lib/api";
+import { useToast } from "../components/Toast";
 
 const exampleJson = JSON.stringify(
   {
@@ -12,12 +13,15 @@ const exampleJson = JSON.stringify(
 );
 
 export function MailSync() {
+  const { notify } = useToast();
   const [jsonText, setJsonText] = useState(exampleJson);
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function manualSync() {
     try {
+      setBusy(true);
       const payload = JSON.parse(jsonText);
       const body = await apiRequest<{ created: number; updated: number; skipped: number }>("/api/admin/mail-sync/manual", {
         method: "POST",
@@ -25,20 +29,42 @@ export function MailSync() {
       });
       setResult(body);
       setError("");
+      notify({ title: "Mail admins synchronized", description: `${body.created} created, ${body.updated} updated, ${body.skipped} skipped.`, tone: "success" });
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : err instanceof Error ? err.message : "Manual sync failed.");
+      const message = err instanceof ApiClientError ? err.message : err instanceof Error ? err.message : "Manual sync failed.";
+      setError(message);
+      notify({ title: "Manual sync failed", description: message, tone: "error" });
+    } finally {
+      setBusy(false);
     }
   }
 
   async function runSync() {
     try {
+      setBusy(true);
       const body = await apiRequest<{ status: string; message: string; requiredEnv: string[] }>("/api/admin/mail-sync/run", {
         method: "POST",
       });
       setResult(body);
       setError("");
+      notify({ title: "API sync checked", description: body.message, tone: body.status === "todo" ? "info" : "success" });
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Run sync failed.");
+      const message = err instanceof ApiClientError ? err.message : "Run sync failed.";
+      setError(message);
+      notify({ title: "Run sync failed", description: message, tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function formatJson() {
+    try {
+      setJsonText(JSON.stringify(JSON.parse(jsonText), null, 2));
+      setError("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Invalid JSON.";
+      setError(message);
+      notify({ title: "JSON format error", description: message, tone: "error" });
     }
   }
 
@@ -65,8 +91,9 @@ export function MailSync() {
             onChange={(event) => setJsonText(event.target.value)}
           />
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className="primary-button" onClick={() => void manualSync()}><UploadCloud className="h-4 w-4" />Sync JSON</button>
-            <button type="button" className="secondary-button" onClick={() => void runSync()}><RefreshCw className="h-4 w-4" />Run API sync</button>
+            <button type="button" className="secondary-button" onClick={formatJson} disabled={busy}><Braces className="h-4 w-4" />Format JSON</button>
+            <button type="button" className="primary-button" onClick={() => void manualSync()} disabled={busy}><UploadCloud className="h-4 w-4" />{busy ? "Syncing..." : "Sync JSON"}</button>
+            <button type="button" className="secondary-button" onClick={() => void runSync()} disabled={busy}><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />Run API sync</button>
           </div>
         </div>
 

@@ -1,20 +1,39 @@
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { KeyRound, Mail, Search, SlidersHorizontal } from "lucide-react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
-import type { SystemRole, User, UserRole, UserStatus } from "../lib/types";
+import type { MailAccount, MailRole, SystemRole, User, UserRole, UserStatus } from "../lib/types";
+import { EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
+import { Modal } from "../components/Modal";
+import { useToast } from "../components/Toast";
 
 const roles: UserRole[] = ["free", "pro", "admin"];
 const systemRoles: SystemRole[] = ["user", "staff", "service_admin", "admin", "super_admin", "owner"];
 const statuses: UserStatus[] = ["active", "disabled", "deleted"];
+const mailRoles: MailRole[] = ["mailbox_user", "mailbox_admin", "mailbox_super"];
 
 export function UserManagement() {
+  const { notify } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [systemRoleFilter, setSystemRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [savingUserId, setSavingUserId] = useState("");
   const [error, setError] = useState("");
+  const [mailTarget, setMailTarget] = useState<User | null>(null);
+  const [mailSaving, setMailSaving] = useState(false);
+  const [mailForm, setMailForm] = useState({
+    mailAddress: "",
+    displayName: "",
+    mailRole: "mailbox_user" as MailRole,
+    mailboxQuotaMb: 1024,
+    aliases: "",
+    canSend: true,
+    canReceive: true,
+    canLoginMail: true,
+  });
 
   async function load(next = { q: query, role: roleFilter, systemRole: systemRoleFilter, status: statusFilter }) {
     const params = new URLSearchParams();
@@ -24,11 +43,16 @@ export function UserManagement() {
     if (next.status) params.set("status", next.status);
 
     try {
+      setLoading(true);
       const body = await apiRequest<{ users: User[] }>(`/api/admin/users?${params.toString()}`);
       setUsers(body.users);
       setError("");
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Users failed to load.");
+      const message = err instanceof ApiClientError ? err.message : "Users failed to load.";
+      setError(message);
+      notify({ title: "Users failed to load", description: message, tone: "error" });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -50,11 +74,71 @@ export function UserManagement() {
   }
 
   async function updateUser(user: User, body: Partial<{ role: UserRole; systemRole: SystemRole; status: UserStatus }>) {
-    const response = await apiRequest<{ user: User }>(`/api/admin/users/${user.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
+    setSavingUserId(user.id);
+    try {
+      const response = await apiRequest<{ user: User }>(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      setUsers((current) => current.map((item) => (item.id === user.id ? { ...item, ...response.user } : item)));
+      notify({ title: "User updated", description: user.email, tone: "success" });
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "User update failed.";
+      notify({ title: "User update failed", description: message, tone: "error" });
+    } finally {
+      setSavingUserId("");
+    }
+  }
+
+  function openMailModal(user: User) {
+    const localPart = user.email.split("@")[0].replace(/[^a-z0-9._-]/gi, ".").toLowerCase();
+    setMailTarget(user);
+    setMailForm({
+      mailAddress: `${localPart}@chemvault.science`,
+      displayName: user.name,
+      mailRole: "mailbox_user",
+      mailboxQuotaMb: 1024,
+      aliases: "",
+      canSend: true,
+      canReceive: true,
+      canLoginMail: true,
     });
-    setUsers((current) => current.map((item) => (item.id === user.id ? response.user : item)));
+  }
+
+  async function createMailbox(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!mailTarget) return;
+    setMailSaving(true);
+    try {
+      const body = await apiRequest<{ account: MailAccount }>("/api/admin/mail/accounts", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: mailTarget.id,
+          ...mailForm,
+          aliases: mailForm.aliases.split(",").map((item) => item.trim()).filter(Boolean),
+        }),
+      });
+      setUsers((current) =>
+        current.map((user) =>
+          user.id === mailTarget.id ? { ...user, mailAddress: body.account.mailAddress, mailStatus: body.account.mailStatus } : user,
+        ),
+      );
+      notify({ title: "Mailbox assigned", description: body.account.mailAddress, tone: "success" });
+      setMailTarget(null);
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "Mailbox creation failed.";
+      notify({ title: "Mailbox creation failed", description: message, tone: "error" });
+    } finally {
+      setMailSaving(false);
+    }
+  }
+
+  function resetFilters() {
+    setQuery("");
+    setRoleFilter("");
+    setSystemRoleFilter("");
+    setStatusFilter("");
+    void load({ q: "", role: "", systemRole: "", status: "" });
   }
 
   return (
@@ -64,6 +148,10 @@ export function UserManagement() {
           <p className="label">Admin Console</p>
           <h1>User management</h1>
         </div>
+        <button className="secondary-button" type="button" onClick={resetFilters}>
+          <RotateCcw className="h-4 w-4" />
+          Reset filters
+        </button>
       </div>
       {error ? <div className="alert-error">{error}</div> : null}
 
@@ -97,6 +185,7 @@ export function UserManagement() {
           </label>
         </div>
 
+        {loading ? <LoadingBlock label="Loading users..." /> : (
         <div className="table-wrap mt-5">
           <table>
             <thead>
@@ -117,19 +206,21 @@ export function UserManagement() {
                     <span>{user.email}</span>
                   </td>
                   <td>
-                    <select value={user.role} onChange={(event) => void updateUser(user, { role: event.target.value as UserRole })}>
+                    <select value={user.role} disabled={savingUserId === user.id} onChange={(event) => void updateUser(user, { role: event.target.value as UserRole })}>
                       {roles.map((role) => <option key={role} value={role}>{role}</option>)}
                     </select>
                   </td>
                   <td>
-                    <select value={user.systemRole} onChange={(event) => void updateUser(user, { systemRole: event.target.value as SystemRole })}>
+                    <select value={user.systemRole} disabled={savingUserId === user.id} onChange={(event) => void updateUser(user, { systemRole: event.target.value as SystemRole })}>
                       {systemRoles.map((role) => <option key={role} value={role}>{role}</option>)}
                     </select>
+                    <div className="mt-2"><StatusBadge value={user.systemRole} /></div>
                   </td>
                   <td>
-                    <select value={user.status} onChange={(event) => void updateUser(user, { status: event.target.value as UserStatus })}>
+                    <select value={user.status} disabled={savingUserId === user.id} onChange={(event) => void updateUser(user, { status: event.target.value as UserStatus })}>
                       {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
                     </select>
+                    <div className="mt-2"><StatusBadge value={user.status} /></div>
                   </td>
                   <td>
                     <span className={user.mailAddress ? "badge-success" : "badge-muted"}>{user.mailAddress || "not assigned"}</span>
@@ -138,15 +229,68 @@ export function UserManagement() {
                     <div className="flex flex-wrap gap-2">
                       <Link className="icon-link" to={`/admin/users/${user.id}`} title="User detail"><SlidersHorizontal className="h-4 w-4" /></Link>
                       <Link className="icon-link" to={`/admin/users/${user.id}/permissions`} title="Permissions"><KeyRound className="h-4 w-4" /></Link>
-                      <Link className="icon-link" to="/admin/mail" title="Mail accounts"><Mail className="h-4 w-4" /></Link>
+                      <button className="icon-link" type="button" onClick={() => openMailModal(user)} title="Assign mailbox" disabled={Boolean(user.mailAddress)}>
+                        <Mail className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {!users.length ? (
+            <div className="mt-4">
+              <EmptyState title="No users found" description="Adjust the search or filters to find matching accounts." />
+            </div>
+          ) : null}
         </div>
+        )}
       </div>
+
+      <Modal
+        open={Boolean(mailTarget)}
+        title="Assign ChemVault mailbox"
+        description={mailTarget ? `Create a mailbox for ${mailTarget.email}.` : undefined}
+        onClose={() => setMailTarget(null)}
+        footer={
+          <>
+            <button className="secondary-button" type="button" onClick={() => setMailTarget(null)} disabled={mailSaving}>Cancel</button>
+            <button className="primary-button" type="submit" form="quick-mailbox-form" disabled={mailSaving}>{mailSaving ? "Assigning..." : "Assign mailbox"}</button>
+          </>
+        }
+      >
+        <form id="quick-mailbox-form" className="grid gap-4" onSubmit={createMailbox}>
+          <div className="form-grid">
+            <label>
+              Mail address
+              <input value={mailForm.mailAddress} onChange={(event) => setMailForm({ ...mailForm, mailAddress: event.target.value })} required />
+            </label>
+            <label>
+              Display name
+              <input value={mailForm.displayName} onChange={(event) => setMailForm({ ...mailForm, displayName: event.target.value })} />
+            </label>
+            <label>
+              Mail role
+              <select value={mailForm.mailRole} onChange={(event) => setMailForm({ ...mailForm, mailRole: event.target.value as MailRole })}>
+                {mailRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+              </select>
+            </label>
+            <label>
+              Quota MB
+              <input type="number" min={0} value={mailForm.mailboxQuotaMb} onChange={(event) => setMailForm({ ...mailForm, mailboxQuotaMb: Number(event.target.value) })} />
+            </label>
+          </div>
+          <label>
+            Aliases
+            <input value={mailForm.aliases} onChange={(event) => setMailForm({ ...mailForm, aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
+          </label>
+          <div className="flex flex-wrap gap-4">
+            <label className="checkbox-row"><input type="checkbox" checked={mailForm.canSend} onChange={(event) => setMailForm({ ...mailForm, canSend: event.target.checked })} /> Can send</label>
+            <label className="checkbox-row"><input type="checkbox" checked={mailForm.canReceive} onChange={(event) => setMailForm({ ...mailForm, canReceive: event.target.checked })} /> Can receive</label>
+            <label className="checkbox-row"><input type="checkbox" checked={mailForm.canLoginMail} onChange={(event) => setMailForm({ ...mailForm, canLoginMail: event.target.checked })} /> Can login mail</label>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }

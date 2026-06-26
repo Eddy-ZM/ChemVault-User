@@ -1,0 +1,267 @@
+import { createSession, sessionCookie } from "./auth";
+import { getUserByEmail, getUserById, insertDefaultServices, toPublicUser } from "./db";
+import { loadUserMailAccount, toPublicMailAccount } from "./permissions";
+import { ApiError, jsonResponse } from "./responses";
+import { randomId } from "./security";
+import type { Env, ExternalIdentityRow, MailAccountRow, UserRow } from "./types";
+import { normalizeEmail, validateEmail } from "./validators";
+
+const encoder = new TextEncoder();
+const mailProvider = "chemvault_mail";
+const mailCredentialAlgorithm = "mail_sha256_salt_prefix_base64";
+
+export interface MailSsoAssertion {
+  email: string;
+  name?: string;
+  mailUserId?: string;
+  iat: string;
+  nonce: string;
+  signature: string;
+  returnTo?: string;
+}
+
+export async function verifyExternalPassword(db: D1Database, user: UserRow, password: string): Promise<boolean> {
+  const identity = await db
+    .prepare(
+      `SELECT * FROM external_identities
+       WHERE user_id = ? AND provider = ? AND credential_algorithm = ?
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+    )
+    .bind(user.id, mailProvider, mailCredentialAlgorithm)
+    .first<ExternalIdentityRow>();
+
+  if (!identity?.credential_hash || !identity.credential_salt) return false;
+  return await verifyMailPassword(password, identity.credential_salt, identity.credential_hash);
+}
+
+export async function verifyMailPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
+  const data = encoder.encode(`${salt}${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const actual = toBase64(new Uint8Array(digest));
+  return constantTimeStringEqual(actual, storedHash);
+}
+
+export async function getMailSsoSecret(env: Env): Promise<string> {
+  const secret = env.MAIL_SYSTEM_SSO_SECRET || env.MAIL_SYSTEM_SYNC_SECRET;
+  if (!secret) throw new ApiError("SSO_NOT_CONFIGURED", "Mail SSO secret is not configured.", 501);
+  return secret;
+}
+
+export async function verifyMailSsoAssertion(env: Env, assertion: MailSsoAssertion): Promise<{
+  email: string;
+  name: string;
+  mailUserId: string | null;
+  returnTo: string;
+}> {
+  const email = normalizeEmail(assertion.email || "");
+  if (!validateEmail(email)) throw new ApiError("INVALID_SSO_ASSERTION", "Mail SSO email is invalid.", 401);
+
+  const iat = Number(assertion.iat);
+  if (!Number.isInteger(iat)) throw new ApiError("INVALID_SSO_ASSERTION", "Mail SSO timestamp is invalid.", 401);
+  if (Math.abs(Date.now() - iat) > 5 * 60 * 1000) {
+    throw new ApiError("INVALID_SSO_ASSERTION", "Mail SSO assertion has expired.", 401);
+  }
+
+  const nonce = typeof assertion.nonce === "string" ? assertion.nonce.trim() : "";
+  const mailUserId = typeof assertion.mailUserId === "string" ? assertion.mailUserId.trim() : "";
+  const name = typeof assertion.name === "string" && assertion.name.trim() ? assertion.name.trim().slice(0, 160) : email;
+  const returnTo = sanitizeReturnTo(assertion.returnTo);
+  if (!nonce || !assertion.signature) throw new ApiError("INVALID_SSO_ASSERTION", "Mail SSO assertion is incomplete.", 401);
+
+  const expected = await signMailSsoAssertion(await getMailSsoSecret(env), {
+    email,
+    name,
+    mailUserId,
+    iat: String(iat),
+    nonce,
+  });
+  if (!constantTimeStringEqual(expected, assertion.signature)) {
+    throw new ApiError("INVALID_SSO_ASSERTION", "Mail SSO signature is invalid.", 401);
+  }
+
+  return { email, name, mailUserId: mailUserId || null, returnTo };
+}
+
+export async function signMailSsoAssertion(
+  secret: string,
+  input: { email: string; name: string; mailUserId?: string | null; iat: string; nonce: string },
+): Promise<string> {
+  const canonical = [
+    normalizeEmail(input.email),
+    input.mailUserId || "",
+    input.name.trim(),
+    input.iat,
+    input.nonce,
+  ].join("\n");
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(canonical));
+  return toBase64Url(new Uint8Array(signature));
+}
+
+export async function findUserByMailIdentity(db: D1Database, email: string, mailUserId?: string | null): Promise<UserRow | null> {
+  if (mailUserId) {
+    const row = await db
+      .prepare(
+        `SELECT user_id FROM external_identities
+         WHERE provider = ? AND provider_user_id = ?
+         LIMIT 1`,
+      )
+      .bind(mailProvider, mailUserId)
+      .first<{ user_id: string }>();
+    if (row?.user_id) return await getUserById(db, row.user_id);
+  }
+
+  const identity = await db
+    .prepare(
+      `SELECT user_id FROM external_identities
+       WHERE provider = ? AND provider_email = ?
+       LIMIT 1`,
+    )
+    .bind(mailProvider, email)
+    .first<{ user_id: string }>();
+  if (identity?.user_id) return await getUserById(db, identity.user_id);
+
+  return await getUserByEmail(db, email);
+}
+
+export async function upsertMailSsoUser(env: Env, assertion: { email: string; name: string; mailUserId: string | null }): Promise<UserRow> {
+  const now = new Date().toISOString();
+  let user = await findUserByMailIdentity(env.DB, assertion.email, assertion.mailUserId);
+
+  if (!user) {
+    const id = randomId("user");
+    await env.DB.prepare(
+      `INSERT INTO users (
+        id, email, password_hash, name, avatar_url, institution, field_of_interest,
+        bio, website, role, system_role, source, global_status, status, created_at, updated_at, last_login_at
+      ) VALUES (?, ?, 'mail_system_sso_only', ?, NULL, NULL, NULL, NULL, NULL, 'free', 'user', 'mail_system', 'active', 'active', ?, ?, NULL)`,
+    )
+      .bind(id, assertion.email, assertion.name, now, now)
+      .run();
+    await insertDefaultServices(env.DB, id, now);
+    user = await getUserById(env.DB, id);
+  } else {
+    await env.DB.prepare(
+      `UPDATE users
+       SET name = COALESCE(NULLIF(name, ''), ?),
+        source = CASE WHEN source = 'local' THEN source ELSE 'mail_system' END,
+        updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(assertion.name, now, user.id)
+      .run();
+    user = await getUserById(env.DB, user.id);
+  }
+
+  if (!user) throw new ApiError("INTERNAL_ERROR", "Mail SSO user could not be loaded.", 500);
+
+  await upsertMailIdentity(env.DB, {
+    userId: user.id,
+    email: assertion.email,
+    mailUserId: assertion.mailUserId,
+    now,
+  });
+
+  await upsertDefaultMailAccount(env.DB, user, assertion.name, now);
+  return user;
+}
+
+export async function completeSsoLogin(input: {
+  env: Env;
+  request: Request;
+  user: UserRow;
+  returnTo?: string;
+}): Promise<Response> {
+  if (input.user.status === "disabled" || input.user.global_status === "disabled") {
+    throw new ApiError("USER_DISABLED", "This account has been disabled.", 403);
+  }
+  if (input.user.status === "deleted" || input.user.global_status === "deleted") {
+    throw new ApiError("USER_DELETED", "This account has been deleted.", 403);
+  }
+
+  const now = new Date().toISOString();
+  await input.env.DB.prepare(`UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?`)
+    .bind(now, now, input.user.id)
+    .run();
+  input.user.last_login_at = now;
+  input.user.updated_at = now;
+
+  const session = await createSession({ env: input.env, request: input.request, userId: input.user.id });
+  const headers = new Headers({
+    "Set-Cookie": sessionCookie(input.env, input.request, session.token, session.expiresAt),
+  });
+
+  const accept = input.request.headers.get("accept") || "";
+  if (input.request.method === "GET" && accept.includes("text/html")) {
+    headers.set("Location", sanitizeReturnTo(input.returnTo));
+    return new Response(null, { status: 302, headers });
+  }
+
+  return jsonResponse(input.request, { user: toPublicUser(input.user) }, { headers });
+}
+
+async function upsertMailIdentity(
+  db: D1Database,
+  input: { userId: string; email: string; mailUserId?: string | null; now: string },
+) {
+  await db
+    .prepare(
+      `INSERT INTO external_identities (
+        id, user_id, provider, provider_user_id, provider_email, credential_hash,
+        credential_salt, credential_algorithm, metadata, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)
+      ON CONFLICT(provider, provider_email) DO UPDATE SET
+        user_id = excluded.user_id,
+        provider_user_id = COALESCE(excluded.provider_user_id, external_identities.provider_user_id),
+        updated_at = excluded.updated_at`,
+    )
+    .bind(randomId("ext"), input.userId, mailProvider, input.mailUserId || null, input.email, input.now, input.now)
+    .run();
+}
+
+async function upsertDefaultMailAccount(db: D1Database, user: UserRow, displayName: string, now: string) {
+  const existing = await loadUserMailAccount(db, user.id);
+  if (existing) return;
+
+  const row = await db
+    .prepare(`SELECT * FROM mail_accounts WHERE mail_address = ? LIMIT 1`)
+    .bind(user.email)
+    .first<MailAccountRow>();
+  if (row) return toPublicMailAccount(row);
+
+  await db
+    .prepare(
+      `INSERT INTO mail_accounts (
+        id, user_id, mail_address, mail_display_name, mail_role, mail_status,
+        can_send, can_receive, can_login_mail, mailbox_quota_mb, aliases, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'mailbox_user', 'active', 1, 1, 1, 1024, '[]', ?, ?)`,
+    )
+    .bind(randomId("mail"), user.id, user.email, displayName, now, now)
+    .run();
+}
+
+function sanitizeReturnTo(value?: string | null): string {
+  if (!value || typeof value !== "string") return "/dashboard";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  return value;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function toBase64Url(bytes: Uint8Array): string {
+  return toBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function constantTimeStringEqual(a: string, b: string): boolean {
+  const maxLength = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let index = 0; index < maxLength; index += 1) {
+    diff |= (a.charCodeAt(index) || 0) ^ (b.charCodeAt(index) || 0);
+  }
+  return diff === 0;
+}

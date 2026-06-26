@@ -22,38 +22,41 @@ import { ServiceAccessEditor } from "./routes/ServiceAccessEditor";
 import { PageAccessEditor } from "./routes/PageAccessEditor";
 import { MailAccountManager } from "./routes/MailAccountManager";
 import { MailSync } from "./routes/MailSync";
+import { ToastProvider } from "./components/Toast";
 import "./styles/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/services" element={<ConnectedServices />} />
-              <Route path="/settings/profile" element={<ProfileSettings />} />
-              <Route path="/settings/security" element={<SecuritySettings />} />
-              <Route path="/settings/plan" element={<PlanSettings />} />
-              <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminPanel />} />
-                <Route path="/admin/users" element={<UserManagement />} />
-                <Route path="/admin/users/:id" element={<UserDetail />} />
-                <Route path="/admin/users/:id/permissions" element={<UserPermissionEditor />} />
-                <Route path="/admin/users/:id/services" element={<ServiceAccessEditor />} />
-                <Route path="/admin/users/:id/pages" element={<PageAccessEditor />} />
-                <Route path="/admin/permissions" element={<PermissionCenter />} />
-                <Route path="/admin/mail" element={<MailAccountManager />} />
-                <Route path="/admin/mail-sync" element={<MailSync />} />
+        <ToastProvider>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/services" element={<ConnectedServices />} />
+                <Route path="/settings/profile" element={<ProfileSettings />} />
+                <Route path="/settings/security" element={<SecuritySettings />} />
+                <Route path="/settings/plan" element={<PlanSettings />} />
+                <Route element={<AdminRoute />}>
+                  <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/admin/users" element={<UserManagement />} />
+                  <Route path="/admin/users/:id" element={<UserDetail />} />
+                  <Route path="/admin/users/:id/permissions" element={<UserPermissionEditor />} />
+                  <Route path="/admin/users/:id/services" element={<ServiceAccessEditor />} />
+                  <Route path="/admin/users/:id/pages" element={<PageAccessEditor />} />
+                  <Route path="/admin/permissions" element={<PermissionCenter />} />
+                  <Route path="/admin/mail" element={<MailAccountManager />} />
+                  <Route path="/admin/mail-sync" element={<MailSync />} />
+                </Route>
               </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,

@@ -12,6 +12,7 @@ The app includes account registration/login, httpOnly JWT cookie sessions, D1-ba
 - Avatar storage: Cloudflare R2 binding `AVATARS`, reserved for a future upload route
 - Auth: signed JWT in an httpOnly cookie; D1 stores only the session token hash
 - Password hashing: Workers-compatible Web Crypto PBKDF2-SHA256
+- External auth: ChemVault Mail password compatibility and signed Mail SSO assertions
 
 ## Local Development
 
@@ -45,6 +46,9 @@ JWT_SECRET="local-development-secret"
 COOKIE_NAME="chemvault_session"
 NODE_ENV="development"
 MAIL_SYSTEM_SYNC_SECRET="local-mail-sync-secret"
+MAIL_SYSTEM_SSO_SECRET="local-mail-sso-secret"
+# Optional, only after the mail system exposes an authorize endpoint:
+# MAIL_SYSTEM_SSO_URL="https://mail.chemvault.science/api/sso/authorize"
 ```
 
 Do not commit `.dev.vars`, real secrets, passwords, API keys, generated cookies, or generated admin SQL.
@@ -79,7 +83,10 @@ Set secrets outside source code:
 ```bash
 openssl rand -base64 48 | npx wrangler pages secret put JWT_SECRET --project-name chemvault-user
 npx wrangler pages secret put MAIL_SYSTEM_SYNC_SECRET --project-name chemvault-user
+npx wrangler pages secret put MAIL_SYSTEM_SSO_SECRET --project-name chemvault-user
 ```
+
+`MAIL_SYSTEM_SSO_SECRET` is optional when it intentionally shares the same value as `MAIL_SYSTEM_SYNC_SECRET`; the code falls back to the sync secret. Set `MAIL_SYSTEM_SSO_URL` as a non-secret Pages variable only after the mail system has a real SSO authorize endpoint.
 
 ## Database Setup And Migration
 
@@ -93,6 +100,7 @@ Apply the main-system migration:
 
 ```bash
 npx wrangler d1 execute chemvault_user --remote --file db/migrations/002_permissions_mail_system.sql
+npx wrangler d1 execute chemvault_user --remote --file db/migrations/003_external_identities_sso.sql
 ```
 
 `db/migrations/002_permissions_mail_system.sql`:
@@ -104,7 +112,9 @@ npx wrangler d1 execute chemvault_user --remote --file db/migrations/002_permiss
 - Inserts default permission definitions and role permissions
 - Promotes existing `role='admin'` users to `system_role='admin'`
 
-The `CREATE TABLE` and `INSERT OR IGNORE` statements are safe to re-run. The `ALTER TABLE users ADD COLUMN ...` statements should be applied once per D1 database.
+`db/migrations/003_external_identities_sso.sql` creates `external_identities`, which links a main account to ChemVault Mail identities and stores imported mail credential hashes for password compatibility. It stores external password hashes and salts only, never plaintext mail passwords.
+
+The `CREATE TABLE` and `INSERT OR IGNORE` statements are safe to re-run. The `ALTER TABLE users ADD COLUMN ...` statements in migration 002 should be applied once per D1 database.
 
 ## Create Admin User
 
@@ -187,6 +197,61 @@ DELETE /api/admin/mail/accounts/:id
 
 `DELETE` is a soft delete.
 
+## Mail Password Compatibility
+
+ChemVault User Center can now accept an existing ChemVault Mail password for mail-system users. Login order is:
+
+1. Verify the local User Center PBKDF2 password in `users.password_hash`.
+2. If that fails, verify the linked ChemVault Mail credential from `external_identities`.
+
+The mail credential format is the existing mail-system SHA-256 salt-prefix format:
+
+```text
+Base64(SHA-256(mail_salt + password))
+```
+
+Imported rows use:
+
+- `provider='chemvault_mail'`
+- `credential_algorithm='mail_sha256_salt_prefix_base64'`
+- `credential_hash` and `credential_salt` copied from the mail system
+
+Do not commit generated import SQL, password hashes, salts, or plaintext credentials. Use a one-off admin script or D1 import on a trusted machine, then delete the generated file.
+
+## Mail SSO
+
+The login page includes a "Continue with ChemVault Mail" entry. It starts at:
+
+```text
+GET /api/auth/sso/mail/start?returnTo=/dashboard
+```
+
+If `MAIL_SYSTEM_SSO_URL` is configured, the user is redirected to the mail system with:
+
+- `client_id=chemvault_user`
+- `redirect_uri=https://user.chemvault.science/api/auth/sso/mail/callback`
+- `return_to=/dashboard`
+
+The mail system should redirect back to the callback with a signed assertion:
+
+```text
+GET /api/auth/sso/mail/callback?email=...&name=...&mailUserId=...&iat=...&nonce=...&signature=...&returnTo=/dashboard
+```
+
+`POST /api/auth/sso/mail/callback` accepts the same fields as JSON.
+
+The signature is base64url HMAC-SHA256 using `MAIL_SYSTEM_SSO_SECRET` over this canonical string:
+
+```text
+lowercase_email
+mailUserId_or_empty
+trimmed_name
+iat_milliseconds
+nonce
+```
+
+Assertions expire after five minutes. A valid SSO callback upserts the main account, links the external mail identity, creates a default mail account if needed, and sets the normal User Center httpOnly session cookie. Until the mail system exposes the authorize endpoint, `/api/auth/sso/mail/start` redirects back to `/login?sso=mail_not_configured`.
+
 ## Mail Admin Sync
 
 Manual sync is available at `/admin/mail-sync` and:
@@ -241,6 +306,10 @@ Auth:
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
+- `GET /api/auth/sso/mail/start`
+- `POST /api/auth/sso/mail/start`
+- `GET /api/auth/sso/mail/callback`
+- `POST /api/auth/sso/mail/callback`
 
 User:
 
@@ -382,6 +451,8 @@ Proxy status: Proxied
 - Confirm logged-out `/dashboard` redirects to `/login`.
 - Confirm normal user sees 403 on `/admin`.
 - Login as admin and open `/admin`.
+- Login as a linked mail-system user with the existing mail password.
+- Open `/api/auth/sso/mail/start` and confirm it redirects to the mail SSO URL, or back to login with `sso=mail_not_configured` if the URL is intentionally unset.
 - Open `/admin/users`, `/admin/permissions`, `/admin/mail`, `/admin/mail-sync`.
 - Give a user `page:file:view`, `service:chemvault_file`, and `file:read`.
 - Confirm `/api/access/check?service=chemvault_file&page=file` returns `allowed: true`.
@@ -405,6 +476,7 @@ Entitlement changes should mirror into `users.role`, `role_permissions`, or dedi
 - Do not store plaintext passwords.
 - Do not store raw session tokens in D1.
 - Do not commit `JWT_SECRET`, `MAIL_SYSTEM_SYNC_SECRET`, mail API keys, or generated admin SQL.
+- Do not commit `MAIL_SYSTEM_SSO_SECRET`, imported mail password hashes, imported salts, or generated mail credential import SQL.
 - `owner` cannot be downgraded or deleted through admin APIs.
 - Ordinary admins cannot modify protected `super_admin`/`owner` accounts.
 - All admin permission, mail, role, and status operations write audit logs.

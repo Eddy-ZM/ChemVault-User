@@ -4,6 +4,7 @@ import { ApiError, handleApi, jsonResponse, readJson } from "../../_shared/respo
 import type { Env } from "../../_shared/types";
 import { verifyPassword } from "../../_shared/security";
 import { validateLoginPayload } from "../../_shared/validators";
+import { verifyExternalPassword } from "../../_shared/externalAuth";
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
@@ -16,7 +17,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
     if (user.global_status === "disabled") throw new ApiError("USER_DISABLED", "This account has been disabled.", 403);
     if (user.global_status === "deleted") throw new ApiError("USER_DELETED", "This account has been deleted.", 403);
 
-    const ok = await verifyPassword(payload.password, user.password_hash);
+    const ok = (await verifyPassword(payload.password, user.password_hash)) || (await verifyExternalPassword(env.DB, user, payload.password));
     if (!ok) throw new ApiError("INVALID_CREDENTIALS", "Invalid email or password.", 401);
 
     const now = new Date().toISOString();

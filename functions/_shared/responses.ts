@@ -8,6 +8,8 @@ export type ErrorCode =
   | "FORBIDDEN"
   | "USER_DISABLED"
   | "USER_DELETED"
+  | "SSO_NOT_CONFIGURED"
+  | "INVALID_SSO_ASSERTION"
   | "INTERNAL_ERROR";
 
 export class ApiError extends Error {
