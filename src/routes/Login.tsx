@@ -90,7 +90,7 @@ export function Login() {
           <span className="h-px flex-1 bg-slate-200" />
         </div>
         <MailSsoButton returnTo={from} />
-        <AppleSignInButton returnTo={from} label="Continue with Apple" />
+        <AppleSignInButton returnTo={from} label="Continue with Apple Account" />
         <p className="text-center text-sm text-slate-500">
           New to ChemVault?{" "}
           <Link className="font-semibold text-blue-700" to="/register">

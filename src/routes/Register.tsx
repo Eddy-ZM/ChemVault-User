@@ -105,7 +105,7 @@ export function Register() {
           <h1>Create account</h1>
           <p>Set up your ChemVault profile for research tools, usage history, and future billing.</p>
         </div>
-        <AppleSignInButton label="Continue with Apple" />
+        <AppleSignInButton label="Continue with Apple Account" />
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
           or create with email

@@ -546,7 +546,7 @@ textarea {
   }
 
   .user-system-footer {
-    @apply mx-5 mb-5 mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950 px-5 pt-5 text-slate-400 shadow-sm lg:mx-8 lg:mb-8 lg:px-6;
+    @apply mt-8 w-full overflow-hidden border-t border-white/10 bg-slate-950 px-5 pt-6 text-slate-400 lg:px-8;
     background:
       linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98)),
       linear-gradient(90deg, rgba(14, 165, 233, 0.14), rgba(99, 102, 241, 0.08), rgba(15, 23, 42, 0));
@@ -554,13 +554,15 @@ textarea {
   }
 
   .user-system-footer-compact {
-    @apply mx-0 mb-0 w-full max-w-6xl;
-    width: calc(100vw - 2.5rem);
-    max-width: 72rem;
+    @apply mx-0 mb-0 max-w-none;
+    width: 100vw;
+    max-width: none;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
   }
 
   .user-system-footer-inner {
-    @apply flex flex-col gap-3 py-2;
+    @apply mx-auto flex w-full max-w-6xl flex-col gap-3 py-2;
   }
 
   .user-system-footer-primary {
@@ -584,7 +586,7 @@ textarea {
   }
 
   .user-system-footer-base {
-    @apply mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/10 py-4 text-xs font-medium text-slate-400;
+    @apply mx-auto mt-4 flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/10 py-4 text-xs font-medium text-slate-400;
   }
 
   .user-system-footer-base nav {
@@ -632,6 +634,10 @@ textarea {
     @apply rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700;
   }
 
+  .legal-document-intro p + p {
+    @apply mt-3;
+  }
+
   .legal-document-sections {
     @apply grid gap-4;
   }
@@ -648,8 +654,20 @@ textarea {
     @apply mt-2 text-sm leading-6 text-slate-600;
   }
 
-  .legal-document section ul {
-    @apply mt-3 grid list-disc gap-2 pl-5 text-sm leading-6 text-slate-600;
+  .legal-document-clauses {
+    @apply mt-3 grid gap-3;
+  }
+
+  .legal-document-clauses li {
+    @apply grid grid-cols-[3.25rem_1fr] gap-3 rounded-md border border-slate-100 bg-slate-50/70 px-3 py-3 text-sm leading-6 text-slate-600;
+  }
+
+  .legal-document-clauses p {
+    @apply m-0;
+  }
+
+  .legal-document-clause-marker {
+    @apply font-semibold tabular-nums text-slate-500;
   }
 
   .legal-document-note {

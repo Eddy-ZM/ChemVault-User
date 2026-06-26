@@ -1,6 +1,6 @@
 export function AppleSignInButton({
   returnTo = "/dashboard",
-  label = "Continue with Apple",
+  label = "Continue with Apple Account",
   mode = "login",
 }: {
   returnTo?: string;
