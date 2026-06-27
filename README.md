@@ -552,6 +552,55 @@ POST /api/admin/mail-sync/run
 
 It currently returns a clear TODO response until the real `mail.chemvault.science` admin API is available. Protect the future integration with `MAIL_SYSTEM_SYNC_SECRET`.
 
+## Direct Mail User Sync
+
+Mail Worker can now push newly created Mail users and Mail accounts into User Center immediately:
+
+```text
+POST /api/integrations/mail/users/sync
+```
+
+The request must include either `x-chemvault-sync-secret: <secret>` or `Authorization: Bearer <secret>`. The secret should match the User Center `MAIL_SYSTEM_SYNC_SECRET` Cloudflare Pages secret. During migration, the endpoint also accepts `MAIL_SYSTEM_SSO_SECRET` so the existing Mail Worker SSO secret can be reused until a dedicated sync secret is configured.
+
+Payload accepted from Mail Worker:
+
+```json
+{
+  "primaryEmail": "user@chemvault.science",
+  "name": "User",
+  "mailAddress": "user@chemvault.science",
+  "displayName": "User",
+  "mailRole": "mailbox_user",
+  "mailStatus": "active",
+  "canSend": true,
+  "canReceive": true,
+  "canLoginMail": true,
+  "mailboxQuotaMb": 1024,
+  "aliases": [],
+  "sourceUserId": "123"
+}
+```
+
+Rules:
+
+- Missing primary users are created as `source='mail_system'`, `role='free'`, `system_role='user'`.
+- `mailbox_admin` promotes the main account to `system_role='admin'`.
+- `mailbox_super` promotes the main account to `system_role='super_admin'`.
+- Ordinary Mail users never become admin or super admin.
+- Existing owner accounts are never downgraded.
+- Existing admin/super admin accounts are not downgraded by an ordinary mailbox sync.
+- Mail account rows are upserted by `mailAddress`, so repeated sync calls are safe.
+- User Center grants `chemvault_mail` service access plus `mail:access`, `mail:send`, and `mail:receive` according to the Mail account flags.
+- Every sync writes an `audit_logs` entry with action `mail_system.user_sync`.
+
+Configure Mail Worker with:
+
+```bash
+npx wrangler secret put USER_SYSTEM_SYNC_SECRET --config mail-worker/wrangler.toml
+```
+
+The value must be identical to the User Center `MAIL_SYSTEM_SYNC_SECRET`. `chemvault_user_sync_url` may remain the default production endpoint unless you are testing against a local User Center.
+
 ## Admin Console Pages
 
 - `/admin`: control-plane dashboard, stats, recent audit logs
@@ -616,6 +665,7 @@ Admin:
 - `DELETE /api/admin/mail/accounts/:id`
 - `POST /api/admin/mail-sync/manual`
 - `POST /api/admin/mail-sync/run`
+- `POST /api/integrations/mail/users/sync`
 
 Errors use:
 

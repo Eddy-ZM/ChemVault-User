@@ -22,6 +22,11 @@ export async function sha256Hex(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+export async function timingSafeEqualString(a: string, b: string): Promise<boolean> {
+  const [aHash, bHash] = await Promise.all([sha256Hex(a), sha256Hex(b)]);
+  return constantTimeEqual(encoder.encode(aHash), encoder.encode(bHash));
+}
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = new Uint8Array(16);
   crypto.getRandomValues(salt);
