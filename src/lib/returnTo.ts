@@ -17,11 +17,12 @@ const allowedLocalHosts = new Set(["localhost", "127.0.0.1"]);
 export function getSafeReturnTo(rawValue: string | null | undefined, fallback = "/dashboard"): string {
   if (!rawValue) return fallback;
   try {
-    if (rawValue.startsWith("/")) return rawValue;
+    if (rawValue.startsWith("/") && !rawValue.startsWith("//")) return rawValue;
     const url = new URL(rawValue);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return fallback;
-    if (allowedProductionHosts.has(url.hostname)) return url.toString();
-    if (allowedLocalHosts.has(url.hostname)) return url.toString();
+    if (allowedProductionHosts.has(url.hostname) && url.protocol === "https:") return url.toString();
+    if (allowedLocalHosts.has(url.hostname) && (url.protocol === "http:" || url.protocol === "https:")) {
+      return url.toString();
+    }
   } catch {
     return fallback;
   }
