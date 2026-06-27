@@ -127,5 +127,6 @@ export async function revokeAllUserSessions(env: Env, user: UserRow): Promise<vo
 
 function buildCookie(env: Env, request: Request, value: string, maxAgePart: string): string {
   const secure = env.NODE_ENV === "production" || new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return `${getCookieName(env)}=${encodeURIComponent(value)}; ${maxAgePart}; Path=/; HttpOnly; SameSite=Lax${secure}`;
+  const domain = env.COOKIE_DOMAIN ? `; Domain=${env.COOKIE_DOMAIN}` : "";
+  return `${getCookieName(env)}=${encodeURIComponent(value)}; ${maxAgePart}; Path=/${domain}; HttpOnly; SameSite=Lax${secure}`;
 }

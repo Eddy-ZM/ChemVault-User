@@ -12,6 +12,7 @@ export interface Env {
   DB: D1Database;
   AVATARS?: R2Bucket;
   COOKIE_NAME?: string;
+  COOKIE_DOMAIN?: string;
   JWT_SECRET?: string;
   MAIL_SYSTEM_SYNC_SECRET?: string;
   MAIL_SYSTEM_SSO_SECRET?: string;

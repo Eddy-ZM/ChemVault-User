@@ -45,6 +45,9 @@ Create a local `.dev.vars` file for `wrangler pages dev`:
 ```bash
 JWT_SECRET="local-development-secret"
 COOKIE_NAME="chemvault_session"
+# Leave unset for localhost. Production uses ".chemvault.science" so ChemVault
+# subdomains such as notif.chemvault.science can read the shared session.
+# COOKIE_DOMAIN=".chemvault.science"
 NODE_ENV="development"
 MAIL_SYSTEM_SYNC_SECRET="local-mail-sync-secret"
 MAIL_SYSTEM_SSO_SECRET="local-mail-sso-secret"
@@ -108,6 +111,7 @@ bucket_name = "chemvault-user-avatars"
 
 [vars]
 COOKIE_NAME = "chemvault_session"
+COOKIE_DOMAIN = ".chemvault.science"
 NODE_ENV = "production"
 MAIL_APPLICATION_TO = "it.apply@chemvault.science"
 MAIL_APPLICATION_FROM = "no-reply@chemvault.science"

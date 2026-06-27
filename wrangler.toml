@@ -13,6 +13,7 @@ bucket_name = "chemvault-user-avatars"
 
 [vars]
 COOKIE_NAME = "chemvault_session"
+COOKIE_DOMAIN = ".chemvault.science"
 NODE_ENV = "production"
 MAIL_APPLICATION_TO = "it.apply@chemvault.science"
 MAIL_APPLICATION_FROM = "no-reply@chemvault.science"
