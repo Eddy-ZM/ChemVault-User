@@ -1,6 +1,7 @@
 import { requireUser } from "../../_shared/auth";
+import { verifyAccountPassword } from "../../_shared/passwordAuth";
 import { ApiError, handleApi, jsonResponse, readJson } from "../../_shared/responses";
-import { hashPassword, verifyPassword } from "../../_shared/security";
+import { hashPassword } from "../../_shared/security";
 import type { Env } from "../../_shared/types";
 import { validatePasswordStrength } from "../../_shared/validators";
 
@@ -16,7 +17,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request }) =>
       throw new ApiError("VALIDATION_ERROR", !strength.ok ? strength.message : "Current password is required.", 400);
     }
 
-    const currentOk = await verifyPassword(currentPassword, user.password_hash);
+    const currentOk = await verifyAccountPassword(env, user, currentPassword);
     if (!currentOk) throw new ApiError("INVALID_CREDENTIALS", "Current password is incorrect.", 401);
 
     const now = new Date().toISOString();

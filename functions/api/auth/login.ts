@@ -1,11 +1,11 @@
 import { createSession, sessionCookie } from "../../_shared/auth";
 import { getUserByEmail, toPublicUser } from "../../_shared/db";
-import { verifyExternalPassword, verifyMailSystemPassword } from "../../_shared/externalAuth";
+import { verifyMailSystemPassword } from "../../_shared/externalAuth";
 import { syncMailUser } from "../../_shared/mailUserSync";
 import { ApiError, handleApi, jsonResponse, readJson } from "../../_shared/responses";
 import type { Env, UserRow } from "../../_shared/types";
-import { verifyPassword } from "../../_shared/security";
 import { validateLoginPayload } from "../../_shared/validators";
+import { verifyAccountPassword } from "../../_shared/passwordAuth";
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
@@ -14,9 +14,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
 
     assertUserCanLogin(user);
 
-    let ok = user
-      ? (await verifyPassword(payload.password, user.password_hash)) || (await verifyExternalPassword(env.DB, user, payload.password))
-      : false;
+    let ok = user ? await verifyAccountPassword(env, user, payload.password) : false;
     if (!ok) {
       const mailAuth = await verifyMailSystemPassword(env, payload.email, payload.password);
       if (mailAuth) {
