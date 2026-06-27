@@ -34,14 +34,14 @@ const accountProviders: Array<{
     description: "Use Google OAuth with only openid, email, and profile scopes.",
   },
   {
-    key: "microsoft",
-    label: "Microsoft",
-    description: "Temporarily unavailable due to Microsoft-side limitations.",
-  },
-  {
     key: "github",
     label: "GitHub",
     description: "Use GitHub OAuth without repository permissions.",
+  },
+  {
+    key: "microsoft",
+    label: "Microsoft",
+    description: "Temporarily unavailable due to Microsoft-side limitations.",
   },
 ];
 

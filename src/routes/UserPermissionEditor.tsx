@@ -2,12 +2,28 @@ import { useEffect, useMemo, useState } from "react";
 import { Ban, Check, CircleDashed, RotateCcw, Save, Search } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
-import { getCategoryDisplay, getPermissionDisplay, permissionSearchText, sortPermissionCategories } from "../lib/permissionDisplay";
+import {
+  getCategoryDisplay,
+  getPermissionDependency,
+  getPermissionDisplay,
+  permissionSearchText,
+  sortPermissionCategories,
+  type PermissionDependency,
+} from "../lib/permissionDisplay";
 import type { PermissionDefinition, PermissionEffect, PermissionGrant } from "../lib/types";
 import { ButtonSpinner, LoadingBlock, SaveBar } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
 type LocalEffect = PermissionEffect | "inherit";
+
+interface PermissionState {
+  permissionAllowed: boolean;
+  usable: boolean;
+  dependency: PermissionDependency | null;
+  dependencyAllowed: boolean;
+  label: string;
+  tone: "allow" | "deny" | "warning";
+}
 
 interface PermissionEditorResponse {
   userId: string;
@@ -110,10 +126,15 @@ export function UserPermissionEditor() {
   if (!data) return <section className="page-section"><LoadingBlock label="Loading permissions..." /></section>;
 
   const effective = new Set(data.effectivePermissions);
-  const roleAllows = new Set(data.rolePermissions.filter((grant) => grant.effect === "allow").map((grant) => grant.key));
+  const roleEffects = new Map(data.rolePermissions.map((grant) => [grant.key, grant.effect]));
+  const previewEffective = getPreviewEffectivePermissions(data.definitions, data.systemRole, data.rolePermissions, draft, effective);
+  const states = new Map(data.definitions.map((definition) => [definition.key, getAccessState(definition, previewEffective)]));
   const directAllows = Object.values(draft).filter((effect) => effect === "allow").length;
   const directDenies = Object.values(draft).filter((effect) => effect === "deny").length;
-  const inheritedCount = Math.max(0, data.definitions.length - directAllows - directDenies);
+  const usableCount = [...states.values()].filter((state) => state.usable).length;
+  const serviceBlockedCount = [...states.values()].filter(
+    (state) => state.permissionAllowed && !state.dependencyAllowed,
+  ).length;
   const dirtyCount = new Set([...Object.keys(draft), ...Object.keys(savedDraft)]).size
     ? [...new Set([...Object.keys(draft), ...Object.keys(savedDraft)])].filter((key) => (draft[key] || "inherit") !== (savedDraft[key] || "inherit")).length
     : 0;
@@ -156,8 +177,12 @@ export function UserPermissionEditor() {
             <strong>{formatSystemRole(data.systemRole)}</strong>
           </div>
           <div>
-            <span>Allowed now</span>
-            <strong>{effective.size}</strong>
+            <span>Usable now</span>
+            <strong>{usableCount}</strong>
+          </div>
+          <div>
+            <span>Blocked by service</span>
+            <strong>{serviceBlockedCount}</strong>
           </div>
           <div>
             <span>Direct allow</span>
@@ -167,12 +192,14 @@ export function UserPermissionEditor() {
             <span>Direct deny</span>
             <strong>{directDenies}</strong>
           </div>
-          <div>
-            <span>Follow role</span>
-            <strong>{inheritedCount}</strong>
-          </div>
         </div>
       </div>
+      {serviceBlockedCount ? (
+        <div className="permission-consistency-warning">
+          {serviceBlockedCount} permission{serviceBlockedCount === 1 ? "" : "s"} are allowed by role or direct rules but are not usable
+          because the required service access is blocked. Grant the service access first, or explicitly deny the dependent permissions.
+        </div>
+      ) : null}
 
       {grouped.map(([category, permissions]) => (
         <div key={category} className="settings-panel">
@@ -193,19 +220,47 @@ export function UserPermissionEditor() {
             {permissions.map((permission) => {
               const effect = draft[permission.key] || "inherit";
               const display = getPermissionDisplay(permission);
-              const allowed = effective.has(permission.key);
+              const state = states.get(permission.key) || getAccessState(permission, previewEffective);
+              const sourceLabel = getSourceLabel(effect, roleEffects.get(permission.key));
+              const canAllowDependency = state.dependency && data.definitions.some((definition) => definition.key === state.dependency?.permissionKey);
               return (
-                <div key={permission.key} className={`permission-card permission-card-${effect}`}>
+                <div
+                  key={permission.key}
+                  className={`permission-card permission-card-${state.tone}`}
+                  data-permission-key={permission.key}
+                  data-permission-state={state.tone}
+                >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3>{display.title}</h3>
-                        <span className={allowed ? "permission-outcome permission-outcome-allow" : "permission-outcome permission-outcome-deny"}>
-                          {allowed ? "Allowed now" : "Blocked now"}
+                        <span className={`permission-outcome permission-outcome-${state.tone}`}>
+                          {state.label}
                         </span>
-                        {roleAllows.has(permission.key) ? <span className="badge-muted">Allowed by role</span> : null}
+                        <span className="badge-muted">{sourceLabel}</span>
                       </div>
                       <p>{display.summary}</p>
+                      {state.dependency ? (
+                        <div className={state.dependencyAllowed ? "permission-dependency permission-dependency-ok" : "permission-dependency permission-dependency-blocked"}>
+                          <span>
+                            Requires <strong>{state.dependency.label}</strong> service access.
+                            {state.dependencyAllowed ? " Requirement satisfied." : " Requirement blocked."}
+                          </span>
+                          {!state.dependencyAllowed && canAllowDependency ? (
+                            <button
+                              className="secondary-button h-8 px-3 text-xs"
+                              type="button"
+                              onClick={() => setEffect(state.dependency!.permissionKey, "allow")}
+                            >
+                              Allow required service
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="permission-dependency permission-dependency-gate">
+                          Service entry gate. Dependent pages and feature permissions require this first.
+                        </div>
+                      )}
                       <div className="permission-technical-key">Technical key: {permission.key}</div>
                     </div>
                     <div className="segmented">
@@ -214,6 +269,7 @@ export function UserPermissionEditor() {
                           key={option}
                           type="button"
                           className={`segment-button ${effect === option ? `segment-active segment-${option}` : ""}`}
+                          data-permission-option={option}
                           onClick={() => setEffect(permission.key, option)}
                         >
                           <span className="inline-flex items-center gap-1.5">
@@ -249,4 +305,84 @@ function categoryActionLabel(effect: LocalEffect): string {
 
 function formatSystemRole(role: string): string {
   return role.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function getAccessState(permission: PermissionDefinition, effective: Set<string>): PermissionState {
+  const permissionAllowed = effective.has(permission.key);
+  const dependency = getPermissionDependency(permission);
+  const dependencyAllowed = !dependency || effective.has(dependency.permissionKey);
+
+  if (permissionAllowed && dependencyAllowed) {
+    return {
+      permissionAllowed,
+      usable: true,
+      dependency,
+      dependencyAllowed,
+      label: "Usable now",
+      tone: "allow",
+    };
+  }
+
+  if (permissionAllowed && !dependencyAllowed) {
+    return {
+      permissionAllowed,
+      usable: false,
+      dependency,
+      dependencyAllowed,
+      label: "Blocked by service access",
+      tone: "warning",
+    };
+  }
+
+  return {
+    permissionAllowed,
+    usable: false,
+    dependency,
+    dependencyAllowed,
+    label: "Permission blocked",
+    tone: "deny",
+  };
+}
+
+function getPreviewEffectivePermissions(
+  definitions: PermissionDefinition[],
+  systemRole: string,
+  rolePermissions: PermissionGrant[],
+  draft: Record<string, LocalEffect>,
+  savedEffective: Set<string>,
+): Set<string> {
+  if (systemRole === "owner" || systemRole === "super_admin") {
+    return new Set(definitions.map((definition) => definition.key));
+  }
+
+  const preview = new Set<string>();
+  for (const grant of rolePermissions) {
+    if (grant.effect === "deny") {
+      preview.delete(grant.key);
+      continue;
+    }
+    if (grant.effect === "allow") preview.add(grant.key);
+  }
+
+  if (!rolePermissions.length) {
+    for (const key of savedEffective) preview.add(key);
+  }
+
+  for (const [key, effect] of Object.entries(draft)) {
+    if (effect === "deny") {
+      preview.delete(key);
+      continue;
+    }
+    if (effect === "allow") preview.add(key);
+  }
+
+  return preview;
+}
+
+function getSourceLabel(effect: LocalEffect, roleEffect?: PermissionEffect): string {
+  if (effect === "allow") return "Direct allow";
+  if (effect === "deny") return "Direct deny";
+  if (roleEffect === "allow") return "Allowed by role";
+  if (roleEffect === "deny") return "Denied by role";
+  return "Follow role";
 }

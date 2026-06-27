@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { ArrowLeft, LogIn } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
@@ -9,16 +9,24 @@ import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { MailSsoButton } from "../components/MailSsoButton";
 import { OAuthButtonGroup } from "../components/OAuthButtonGroup";
+import { getSafeReturnTo, navigateToReturnTo } from "../lib/returnTo";
 
 export function Login() {
-  const { login } = useAuth();
+  const { login, loading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const from = (location.state as { from?: string } | null)?.from || "/dashboard";
+  const from = getSafeReturnTo(searchParams.get("returnTo") || (location.state as { from?: string } | null)?.from);
+  const returnToQuery = `?returnTo=${encodeURIComponent(from)}`;
   const ssoMessage = getSsoMessage(searchParams.get("sso"));
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigateToReturnTo(from, navigate);
+    }
+  }, [from, loading, navigate, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,7 +42,7 @@ export function Login() {
     setBusy(true);
     try {
       await login({ email, password });
-      navigate(from, { replace: true });
+      navigateToReturnTo(from, navigate);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Login failed.");
     } finally {
@@ -82,11 +90,11 @@ export function Login() {
           or
           <span className="h-px flex-1 bg-slate-200" />
         </div>
-        <OAuthButtonGroup returnTo={from} />
         <MailSsoButton returnTo={from} />
+        <OAuthButtonGroup returnTo={from} />
         <p className="text-center text-sm text-slate-500">
           New to ChemVault?{" "}
-          <Link className="font-semibold text-blue-700" to="/register">
+          <Link className="font-semibold text-blue-700" to={`/register${returnToQuery}`}>
             Create an account
           </Link>
         </p>

@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal, Trash2, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { MailAccount, MailRole, SystemRole, User, UserRole, UserStatus } from "../lib/types";
@@ -12,6 +12,26 @@ const systemRoles: SystemRole[] = ["user", "staff", "service_admin", "admin", "s
 const statuses: UserStatus[] = ["active", "disabled", "deleted"];
 const mailRoles: MailRole[] = ["mailbox_user", "mailbox_admin", "mailbox_super"];
 
+const initialCreateForm = {
+  name: "",
+  email: "",
+  password: "",
+  institution: "",
+  fieldOfInterest: "",
+  role: "free" as UserRole,
+  systemRole: "user" as SystemRole,
+  status: "active" as UserStatus,
+  assignMailbox: true,
+  mailAddress: "",
+  mailDisplayName: "",
+  mailRole: "mailbox_user" as MailRole,
+  mailboxQuotaMb: 1024,
+  aliases: "",
+  canSend: true,
+  canReceive: true,
+  canLoginMail: true,
+};
+
 export function UserManagement() {
   const { notify } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -22,6 +42,9 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState("");
   const [error, setError] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createForm, setCreateForm] = useState(initialCreateForm);
   const [mailTarget, setMailTarget] = useState<User | null>(null);
   const [mailSaving, setMailSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
@@ -106,6 +129,77 @@ export function UserManagement() {
     });
   }
 
+  function openCreateModal() {
+    setCreateForm(initialCreateForm);
+    setCreateOpen(true);
+  }
+
+  function updateCreateForm(updates: Partial<typeof initialCreateForm>) {
+    setCreateForm((current) => ({ ...current, ...updates }));
+  }
+
+  function handleCreateEmailChange(value: string) {
+    const suggestedMailAddress = suggestMailAddress(value);
+    setCreateForm((current) => ({
+      ...current,
+      email: value,
+      mailAddress: current.mailAddress && current.mailAddress !== suggestMailAddress(current.email) ? current.mailAddress : suggestedMailAddress,
+    }));
+  }
+
+  function handleCreateNameChange(value: string) {
+    setCreateForm((current) => ({
+      ...current,
+      name: value,
+      mailDisplayName: current.mailDisplayName && current.mailDisplayName !== current.name ? current.mailDisplayName : value,
+    }));
+  }
+
+  async function createUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreateSaving(true);
+    try {
+      const body = await apiRequest<{ user: User; mailAccount: MailAccount | null }>("/api/admin/users", {
+        method: "POST",
+        body: JSON.stringify({
+          name: createForm.name,
+          email: createForm.email,
+          password: createForm.password,
+          institution: createForm.institution,
+          fieldOfInterest: createForm.fieldOfInterest,
+          role: createForm.role,
+          systemRole: createForm.systemRole,
+          status: createForm.status,
+          assignMailbox: createForm.assignMailbox,
+          mailAccount: createForm.assignMailbox
+            ? {
+                mailAddress: createForm.mailAddress,
+                displayName: createForm.mailDisplayName || createForm.name,
+                mailRole: createForm.mailRole,
+                canSend: createForm.canSend,
+                canReceive: createForm.canReceive,
+                canLoginMail: createForm.canLoginMail,
+                mailboxQuotaMb: createForm.mailboxQuotaMb,
+                aliases: createForm.aliases.split(",").map((item) => item.trim()).filter(Boolean),
+              }
+            : null,
+        }),
+      });
+      setUsers((current) => [body.user, ...current.filter((user) => user.id !== body.user.id)]);
+      notify({
+        title: "User created",
+        description: body.mailAccount ? `${body.user.email} with ${body.mailAccount.mailAddress}` : body.user.email,
+        tone: "success",
+      });
+      setCreateOpen(false);
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "User creation failed.";
+      notify({ title: "User creation failed", description: message, tone: "error" });
+    } finally {
+      setCreateSaving(false);
+    }
+  }
+
   async function createMailbox(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!mailTarget) return;
@@ -164,10 +258,16 @@ export function UserManagement() {
           <p className="label">Admin Console</p>
           <h1>User management</h1>
         </div>
-        <button className="secondary-button" type="button" onClick={resetFilters}>
-          <RotateCcw className="h-4 w-4" />
-          Reset filters
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="primary-button" type="button" onClick={openCreateModal}>
+            <UserPlus className="h-4 w-4" />
+            Add user
+          </button>
+          <button className="secondary-button" type="button" onClick={resetFilters}>
+            <RotateCcw className="h-4 w-4" />
+            Reset filters
+          </button>
+        </div>
       </div>
       {error ? <div className="alert-error">{error}</div> : null}
 
@@ -267,6 +367,121 @@ export function UserManagement() {
       </div>
 
       <Modal
+        open={createOpen}
+        title="Add ChemVault account"
+        description="Create a main account manually and optionally assign a ChemVault mailbox."
+        onClose={() => setCreateOpen(false)}
+        footer={
+          <>
+            <button className="secondary-button" type="button" onClick={() => setCreateOpen(false)} disabled={createSaving}>Cancel</button>
+            <button className="primary-button" type="submit" form="create-user-form" disabled={createSaving}>
+              {createSaving ? <ButtonSpinner label="Creating..." /> : "Create account"}
+            </button>
+          </>
+        }
+      >
+        <form id="create-user-form" className="grid gap-5" onSubmit={createUser}>
+          <div className="form-grid">
+            <label>
+              Display name
+              <input value={createForm.name} onChange={(event) => handleCreateNameChange(event.target.value)} required />
+            </label>
+            <label>
+              Primary email
+              <input value={createForm.email} onChange={(event) => handleCreateEmailChange(event.target.value)} type="email" required />
+            </label>
+            <label>
+              Temporary password
+              <input
+                value={createForm.password}
+                onChange={(event) => updateCreateForm({ password: event.target.value })}
+                type="password"
+                minLength={8}
+                placeholder="Optional"
+                autoComplete="new-password"
+              />
+              <span className="inline-help">Leave blank for SSO-only access until a password is set later.</span>
+            </label>
+            <label>
+              Institution
+              <input value={createForm.institution} onChange={(event) => updateCreateForm({ institution: event.target.value })} />
+            </label>
+            <label>
+              Field of interest
+              <input value={createForm.fieldOfInterest} onChange={(event) => updateCreateForm({ fieldOfInterest: event.target.value })} />
+            </label>
+            <label>
+              Account role
+              <select value={createForm.role} onChange={(event) => updateCreateForm({ role: event.target.value as UserRole })}>
+                {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+              </select>
+            </label>
+            <label>
+              System role
+              <select value={createForm.systemRole} onChange={(event) => updateCreateForm({ systemRole: event.target.value as SystemRole })}>
+                {systemRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+              </select>
+            </label>
+            <label>
+              Status
+              <select value={createForm.status} onChange={(event) => updateCreateForm({ status: event.target.value as UserStatus })}>
+                {statuses.filter((status) => status !== "deleted").map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={createForm.assignMailbox}
+                onChange={(event) => updateCreateForm({
+                  assignMailbox: event.target.checked,
+                  mailAddress: createForm.mailAddress || suggestMailAddress(createForm.email),
+                  mailDisplayName: createForm.mailDisplayName || createForm.name,
+                })}
+              />
+              Assign ChemVault mailbox now
+            </label>
+
+            {createForm.assignMailbox ? (
+              <div className="mt-4 grid gap-4">
+                <div className="form-grid">
+                  <label>
+                    Mail address
+                    <input value={createForm.mailAddress} onChange={(event) => updateCreateForm({ mailAddress: event.target.value })} required />
+                  </label>
+                  <label>
+                    Mail display name
+                    <input value={createForm.mailDisplayName} onChange={(event) => updateCreateForm({ mailDisplayName: event.target.value })} />
+                  </label>
+                  <label>
+                    Mail role
+                    <select value={createForm.mailRole} onChange={(event) => updateCreateForm({ mailRole: event.target.value as MailRole })}>
+                      {mailRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Quota MB
+                    <input type="number" min={0} value={createForm.mailboxQuotaMb} onChange={(event) => updateCreateForm({ mailboxQuotaMb: Number(event.target.value) })} />
+                  </label>
+                </div>
+                <label>
+                  Aliases
+                  <input value={createForm.aliases} onChange={(event) => updateCreateForm({ aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
+                </label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="checkbox-row"><input type="checkbox" checked={createForm.canSend} onChange={(event) => updateCreateForm({ canSend: event.target.checked })} /> Can send</label>
+                  <label className="checkbox-row"><input type="checkbox" checked={createForm.canReceive} onChange={(event) => updateCreateForm({ canReceive: event.target.checked })} /> Can receive</label>
+                  <label className="checkbox-row"><input type="checkbox" checked={createForm.canLoginMail} onChange={(event) => updateCreateForm({ canLoginMail: event.target.checked })} /> Can login mail</label>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
         open={Boolean(mailTarget)}
         title="Assign ChemVault mailbox"
         description={mailTarget ? `Create a mailbox for ${mailTarget.email}.` : undefined}
@@ -324,4 +539,9 @@ export function UserManagement() {
       />
     </section>
   );
+}
+
+function suggestMailAddress(email: string): string {
+  const localPart = email.split("@")[0].replace(/[^a-z0-9._-]/gi, ".").replace(/\.+/g, ".").replace(/^\.|\.$/g, "").toLowerCase();
+  return localPart ? `${localPart}@chemvault.science` : "";
 }

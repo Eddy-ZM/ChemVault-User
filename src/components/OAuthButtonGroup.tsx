@@ -8,8 +8,8 @@ export function OAuthButtonGroup({ returnTo = "/dashboard" }: { returnTo?: strin
     <div className="oauth-provider-grid">
       <AppleSignInButton returnTo={returnTo} label="Continue with Apple Account" />
       <OAuthSignInButton provider="google" returnTo={returnTo} />
-      <OAuthSignInButton provider="microsoft" returnTo={returnTo} disabledReason={microsoftUnavailableReason} />
       <OAuthSignInButton provider="github" returnTo={returnTo} />
+      <OAuthSignInButton provider="microsoft" returnTo={returnTo} disabledReason={microsoftUnavailableReason} />
     </div>
   );
 }

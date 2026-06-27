@@ -173,6 +173,8 @@ Production fails closed: if `NODE_ENV=production` and `TURNSTILE_SECRET_KEY` is 
 
 Email-code verification is the alternate path if ChemVault later enables transactional email. That path should create short-lived, rate-limited verification codes, hash stored codes, enforce resend limits, and only create accounts after code confirmation.
 
+`/login` and `/register` accept a `returnTo` query parameter for ChemVault services such as `https://app.chemvault.science/dashboard`. The frontend validates the target against ChemVault-owned domains and local development origins before redirecting after successful authentication.
+
 ## Database Setup And Migration
 
 Apply the base schema to a new database:

@@ -13,6 +13,12 @@ export interface PermissionDisplay {
   categoryDescription: string;
 }
 
+export interface PermissionDependency {
+  serviceKey: string;
+  permissionKey: string;
+  label: string;
+}
+
 const categories: Record<string, CategoryDisplay> = {
   service: {
     label: "Service Access",
@@ -84,6 +90,64 @@ const actionLabels: Record<string, string> = {
   write: "Write",
 };
 
+const resourceLabels: Record<string, string> = {
+  admin: "Admin Console",
+  admin_audit: "Admin Audit",
+  admin_mail: "Admin Mail",
+  admin_permissions: "Admin Permissions",
+  admin_services: "Admin Services",
+  admin_users: "Admin Users",
+  chemvault_admin: "Admin Console",
+  chemvault_app: "ChemVault App",
+  chemvault_docs: "ChemVault Docs",
+  chemvault_extract: "ChemVault Extract",
+  chemvault_file: "ChemVault Files",
+  chemvault_mail: "ChemVault Mail",
+  chemvault_main: "ChemVault Main Site",
+  chemvault_model: "ChemVault Model",
+  chemvault_molecule: "ChemVault Molecule",
+  chemvault_notif: "ChemVault Notif",
+  chemvault_user: "User Center",
+  dashboard: "Dashboard",
+  docs: "Docs",
+  extract: "Extract",
+  file: "Files",
+  molecule: "Molecule",
+  model: "Model",
+  notif: "Notif",
+  plan: "Plan",
+  profile: "Profile",
+  security: "Security",
+};
+
+const pageServiceMap: Record<string, string> = {
+  admin: "chemvault_admin",
+  admin_audit: "chemvault_admin",
+  admin_mail: "chemvault_admin",
+  admin_permissions: "chemvault_admin",
+  admin_services: "chemvault_admin",
+  admin_users: "chemvault_admin",
+  dashboard: "chemvault_user",
+  docs: "chemvault_docs",
+  extract: "chemvault_extract",
+  file: "chemvault_file",
+  mail: "chemvault_mail",
+  model: "chemvault_model",
+  molecule: "chemvault_molecule",
+  notif: "chemvault_notif",
+  plan: "chemvault_user",
+  profile: "chemvault_user",
+  security: "chemvault_user",
+};
+
+const categoryServiceMap: Record<string, string> = {
+  admin: "chemvault_admin",
+  docs: "chemvault_docs",
+  file: "chemvault_file",
+  mail: "chemvault_mail",
+  model: "chemvault_model",
+};
+
 export function getCategoryDisplay(category: string): CategoryDisplay {
   return categories[category] || {
     label: titleCase(category),
@@ -103,11 +167,12 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
   const [area, resource = "", action = "access", extra = ""] = permission.key.split(":");
   const resourceName = toResourceName(resource || area);
   const actionName = toActionName(extra ? `${action}_${extra}` : action);
+  const description = cleanDescription(permission);
 
   if (area === "service") {
     return {
       title: `Access ${resourceName}`,
-      summary: permission.description || `Lets the user open and use ${resourceName}.`,
+      summary: description || `Lets the user enter ${resourceName}. Other page and feature permissions under this service are unusable without this access.`,
       categoryLabel: category.label,
       categoryDescription: category.description,
     };
@@ -116,7 +181,7 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
   if (area === "page") {
     return {
       title: `${actionName} ${resourceName} page`,
-      summary: permission.description || `Lets the user ${actionName.toLowerCase()} the ${resourceName} page.`,
+      summary: description || `Lets the user ${actionName.toLowerCase()} the ${resourceName} page after the required service access is also allowed.`,
       categoryLabel: category.label,
       categoryDescription: category.description,
     };
@@ -125,7 +190,7 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
   if (area === "admin") {
     return {
       title: `${actionName} ${resourceName}`,
-      summary: permission.description || `Allows administrative ${resourceName.toLowerCase()} ${actionName.toLowerCase()} actions.`,
+      summary: description || `Allows administrative ${resourceName.toLowerCase()} ${actionName.toLowerCase()} actions after Admin Console access is allowed.`,
       categoryLabel: category.label,
       categoryDescription: category.description,
     };
@@ -134,7 +199,7 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
   if (area === "api" && resource === "key") {
     return {
       title: `${actionName} API keys`,
-      summary: permission.description || `Allows the user to ${actionName.toLowerCase()} API keys.`,
+      summary: description || `Allows the user to ${actionName.toLowerCase()} API keys.`,
       categoryLabel: category.label,
       categoryDescription: category.description,
     };
@@ -142,9 +207,26 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
 
   return {
     title: `${actionName} ${resourceName}`,
-    summary: permission.description || `Allows ${actionName.toLowerCase()} actions for ${resourceName}.`,
+    summary: description || `Allows ${actionName.toLowerCase()} actions for ${resourceName} after the required service access is also allowed.`,
     categoryLabel: category.label,
     categoryDescription: category.description,
+  };
+}
+
+export function getPermissionDependency(permission: PermissionDefinition): PermissionDependency | null {
+  const [area, resource = ""] = permission.key.split(":");
+  if (area === "service") return null;
+
+  const serviceKey =
+    area === "page"
+      ? pageServiceMap[resource]
+      : categoryServiceMap[permission.category] || categoryServiceMap[area] || null;
+  if (!serviceKey) return null;
+
+  return {
+    serviceKey,
+    permissionKey: `service:${serviceKey}:access`,
+    label: toResourceName(serviceKey),
   };
 }
 
@@ -158,8 +240,18 @@ function toActionName(value: string): string {
 }
 
 function toResourceName(value: string): string {
+  if (resourceLabels[value]) return resourceLabels[value];
   const cleaned = value.replace(/^chemvault_/, "ChemVault ");
   return titleCase(cleaned);
+}
+
+function cleanDescription(permission: PermissionDefinition): string | null {
+  const description = permission.description?.trim();
+  if (!description) return null;
+  const escapedKey = permission.key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (new RegExp(`^Allows\\s+${escapedKey}\\.?$`, "i").test(description)) return null;
+  if (/^Allows\s+[a-z]+:[a-z0-9_:-]+\.?$/i.test(description)) return null;
+  return description;
 }
 
 function titleCase(value: string): string {

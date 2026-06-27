@@ -109,7 +109,7 @@ export function MailSsoButton({ returnTo = "/dashboard" }: { returnTo?: string }
         ) : (
           <>
             <Mail className="h-4 w-4" />
-            Continue with ChemVault Mail
+            Continue with ChemVault Mail SSO
           </>
         )}
       </button>

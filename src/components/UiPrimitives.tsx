@@ -7,7 +7,7 @@ type StatusValue = AccessStatus | MailStatus | UserStatus | UserRole | SystemRol
 export function StatusBadge({ value }: { value: StatusValue }) {
   const normalized = String(value || "unknown");
   const className =
-    normalized === "active" || normalized === "allow" || normalized === "pro"
+    normalized === "active" || normalized === "allow" || normalized === "pro" || normalized === "connected"
       ? "status-active"
       : normalized === "disabled" || normalized === "deleted" || normalized === "deny"
         ? "status-danger"

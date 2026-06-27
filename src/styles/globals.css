@@ -378,6 +378,15 @@ textarea {
     @apply border-red-200 bg-red-50/40;
   }
 
+  .permission-card-warning {
+    @apply border-amber-200 bg-amber-50/50;
+  }
+
+  .permission-consistency-warning {
+    @apply rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900;
+    animation: alert-in 240ms ease-out;
+  }
+
   .permission-outcome {
     @apply inline-flex min-h-7 items-center rounded-lg px-2.5 text-xs font-semibold ring-1;
   }
@@ -388,6 +397,30 @@ textarea {
 
   .permission-outcome-deny {
     @apply bg-red-50 text-red-700 ring-red-100;
+  }
+
+  .permission-outcome-warning {
+    @apply bg-amber-50 text-amber-800 ring-amber-200;
+  }
+
+  .permission-dependency {
+    @apply mt-3 flex flex-col gap-2 rounded-lg border px-3 py-2 text-xs font-semibold leading-5 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .permission-dependency strong {
+    @apply text-inherit;
+  }
+
+  .permission-dependency-ok {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+  }
+
+  .permission-dependency-blocked {
+    @apply border-amber-200 bg-amber-50 text-amber-900;
+  }
+
+  .permission-dependency-gate {
+    @apply border-slate-200 bg-slate-50 text-slate-600;
   }
 
   .permission-technical-key {

@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ArrowLeft, UserPlus } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { isEmail, passwordError, required } from "../lib/validators";
@@ -10,6 +10,7 @@ import { ButtonSpinner } from "../components/UiPrimitives";
 import { AgreementModal, type AgreementKind } from "../components/LegalAgreement";
 import { TurnstileWidget } from "../components/TurnstileWidget";
 import { OAuthButtonGroup } from "../components/OAuthButtonGroup";
+import { getSafeReturnTo, navigateToReturnTo } from "../lib/returnTo";
 
 interface RegisterOptions {
   turnstile: {
@@ -20,8 +21,11 @@ interface RegisterOptions {
 }
 
 export function Register() {
-  const { register } = useAuth();
+  const { register, loading, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = getSafeReturnTo(searchParams.get("returnTo"));
+  const returnToQuery = `?returnTo=${encodeURIComponent(returnTo)}`;
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [agreementOpen, setAgreementOpen] = useState<AgreementKind | null>(null);
@@ -30,6 +34,12 @@ export function Register() {
   const [registerOptions, setRegisterOptions] = useState<RegisterOptions>({
     turnstile: { siteKey: null, required: false, action: "register_email" },
   });
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigateToReturnTo(returnTo, navigate);
+    }
+  }, [loading, navigate, returnTo, user]);
 
   useEffect(() => {
     void apiRequest<RegisterOptions>("/api/auth/register-options")
@@ -85,7 +95,7 @@ export function Register() {
         fieldOfInterest: String(form.get("fieldOfInterest") || ""),
         turnstileToken,
       });
-      navigate("/dashboard", { replace: true });
+      navigateToReturnTo(returnTo, navigate);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Registration failed.");
       resetTurnstile();
@@ -105,7 +115,7 @@ export function Register() {
           <h1>Create account</h1>
           <p>Set up your ChemVault profile for research tools, usage history, and future billing.</p>
         </div>
-        <OAuthButtonGroup />
+        <OAuthButtonGroup returnTo={returnTo} />
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
           or create with email
@@ -193,7 +203,7 @@ export function Register() {
         </button>
         <p className="text-center text-sm text-slate-500">
           Already registered?{" "}
-          <Link className="font-semibold text-blue-700" to="/login">
+          <Link className="font-semibold text-blue-700" to={`/login${returnToQuery}`}>
             Login
           </Link>
         </p>

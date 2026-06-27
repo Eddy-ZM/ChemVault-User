@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ButtonSpinner } from "./UiPrimitives";
 
 interface ModalProps {
@@ -31,7 +32,7 @@ export function Modal({ open, title, description, onClose, children, footer, siz
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className={`modal-panel ${sizeClass[size]}`}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -46,7 +47,8 @@ export function Modal({ open, title, description, onClose, children, footer, siz
         <div className="max-h-[calc(100vh-13rem)] overflow-auto p-5">{children}</div>
         {footer ? <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
