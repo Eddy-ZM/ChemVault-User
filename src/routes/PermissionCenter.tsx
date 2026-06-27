@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Edit3, Plus, Search } from "lucide-react";
 import { ApiClientError, apiRequest } from "../lib/api";
+import { getCategoryDisplay, getPermissionDisplay, permissionSearchText, sortPermissionCategories } from "../lib/permissionDisplay";
 import type { PermissionDefinition } from "../lib/types";
 import { Modal } from "../components/Modal";
 import { ButtonSpinner, EmptyState, LoadingBlock } from "../components/UiPrimitives";
@@ -12,6 +13,8 @@ export function PermissionCenter() {
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({ key: "", name: "", category: "custom", description: "" });
   const [activeCategory, setActiveCategory] = useState("all");
+  const [editingPermission, setEditingPermission] = useState<PermissionDefinition | null>(null);
+  const [editingDescription, setEditingDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -41,13 +44,13 @@ export function PermissionCenter() {
     const result = new Map<string, PermissionDefinition[]>();
     const needle = query.trim().toLowerCase();
     for (const permission of permissions) {
-      if (needle && !`${permission.key} ${permission.name} ${permission.description || ""}`.toLowerCase().includes(needle)) continue;
+      if (needle && !permissionSearchText(permission).toLowerCase().includes(needle)) continue;
       if (activeCategory !== "all" && permission.category !== activeCategory) continue;
       const list = result.get(permission.category) || [];
       list.push(permission);
       result.set(permission.category, list);
     }
-    return [...result.entries()];
+    return [...result.entries()].sort(sortPermissionCategories);
   }, [activeCategory, permissions, query]);
 
   const categories = useMemo(() => ["all", ...Array.from(new Set(permissions.map((permission) => permission.category))).sort()], [permissions]);
@@ -91,6 +94,19 @@ export function PermissionCenter() {
     }
   }
 
+  function openDescriptionEditor(permission: PermissionDefinition) {
+    setEditingPermission(permission);
+    setEditingDescription(permission.description || "");
+  }
+
+  async function saveDescription(event: FormEvent) {
+    event.preventDefault();
+    if (!editingPermission) return;
+    await updateDescription(editingPermission, editingDescription);
+    setEditingPermission(null);
+    setEditingDescription("");
+  }
+
   return (
     <section className="page-section">
       <div className="section-heading">
@@ -110,7 +126,7 @@ export function PermissionCenter() {
           <label className="relative">
             <Search className="pointer-events-none absolute left-3 top-[38px] h-4 w-4 text-slate-400" />
             Search permissions
-            <input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="page:file:view, mail, admin..." />
+            <input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search pages, files, mail, admin actions..." />
           </label>
           <p className="inline-help">{permissions.length} permissions across {Math.max(0, categories.length - 1)} categories.</p>
         </div>
@@ -122,7 +138,7 @@ export function PermissionCenter() {
               type="button"
               onClick={() => setActiveCategory(category)}
             >
-              {category}
+              {category === "all" ? "All" : getCategoryDisplay(category).label}
             </button>
           ))}
         </div>
@@ -130,26 +146,33 @@ export function PermissionCenter() {
 
       {loading ? <LoadingBlock label="Loading permissions..." /> : grouped.map(([category, items]) => (
         <div key={category} className="settings-panel">
-          <h2 className="text-lg font-semibold capitalize text-slate-950">{category}</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">{getCategoryDisplay(category).label}</h2>
+            <p className="mt-1 text-sm text-slate-500">{getCategoryDisplay(category).description}</p>
+          </div>
           <div className="mt-4 grid gap-3">
-            {items.map((permission) => (
-              <div key={permission.id} className="rounded-lg border border-slate-200 p-3">
+            {items.map((permission) => {
+              const display = getPermissionDisplay(permission);
+              return (
+              <div key={permission.id} className="permission-definition-card">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <div className="font-mono text-sm font-semibold text-slate-950">{permission.key}</div>
-                    <div className="text-sm text-slate-500">{permission.name}</div>
+                  <div className="min-w-0">
+                    <h3>{display.title}</h3>
+                    <p>{display.summary}</p>
+                    <div className="permission-technical-key">Technical key: {permission.key}</div>
                   </div>
-                  <input
-                    className="lg:max-w-xl"
+                  <button
+                    className="secondary-button h-9"
                     disabled={savingPermissionId === permission.id}
-                    value={permission.description || ""}
-                    onChange={(event) => setPermissions((current) => current.map((item) => item.id === permission.id ? { ...item, description: event.target.value } : item))}
-                    onBlur={(event) => void updateDescription(permission, event.target.value)}
-                    placeholder="Description"
-                  />
+                    type="button"
+                    onClick={() => openDescriptionEditor(permission)}
+                  >
+                    {savingPermissionId === permission.id ? <ButtonSpinner label="Saving..." /> : <><Edit3 className="h-4 w-4" />Edit description</>}
+                  </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       ))}
@@ -187,6 +210,35 @@ export function PermissionCenter() {
           <label>
             Description
             <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={4} />
+          </label>
+        </form>
+      </Modal>
+      <Modal
+        open={Boolean(editingPermission)}
+        title={editingPermission ? `Edit ${getPermissionDisplay(editingPermission).title}` : "Edit permission"}
+        description="Update the administrator-facing explanation shown in permission screens."
+        onClose={() => setEditingPermission(null)}
+        footer={
+          <>
+            <button className="secondary-button" type="button" onClick={() => setEditingPermission(null)} disabled={Boolean(savingPermissionId)}>
+              Cancel
+            </button>
+            <button className="primary-button" type="submit" form="edit-permission-description-form" disabled={Boolean(savingPermissionId)}>
+              {savingPermissionId ? <ButtonSpinner label="Saving..." /> : "Save description"}
+            </button>
+          </>
+        }
+      >
+        <form id="edit-permission-description-form" className="grid gap-4" onSubmit={saveDescription}>
+          {editingPermission ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-950">{getPermissionDisplay(editingPermission).title}</p>
+              <p className="mt-1 text-xs text-slate-500">Technical key: {editingPermission.key}</p>
+            </div>
+          ) : null}
+          <label>
+            Description
+            <textarea value={editingDescription} onChange={(event) => setEditingDescription(event.target.value)} rows={5} />
           </label>
         </form>
       </Modal>

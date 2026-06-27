@@ -9,6 +9,7 @@ import {
 } from "../../../_shared/permissions";
 import { ApiError, handleApi, jsonResponse, readJson } from "../../../_shared/responses";
 import type { AccessStatus, Env, PermissionEffect, SystemRole, UserRole, UserRow, UserStatus } from "../../../_shared/types";
+import { permanentlyDeleteUser } from "../../../_shared/userDeletion";
 import { validateRole, validateStatus, validateSystemRole } from "../../../_shared/validators";
 
 type DetailGrant = { key: string; effect?: PermissionEffect; status?: AccessStatus | string; created_at?: string };
@@ -177,25 +178,13 @@ export const onRequestDelete: PagesFunction<Env> = async ({ env, request, params
 
     assertActorCanManageTarget({ actor, target, action: "delete" });
 
-    const now = new Date().toISOString();
-    await env.DB.prepare(`UPDATE users SET status = 'deleted', global_status = 'deleted', updated_at = ? WHERE id = ?`)
-      .bind(now, target.id)
-      .run();
-
-    const deleted = await getUserById(env.DB, target.id);
-    if (!deleted) throw new ApiError("VALIDATION_ERROR", "User not found after delete.", 404);
-    await revokeAllUserSessions(env, deleted);
-
-    await writeAuditLog({
+    const deletedUser = await permanentlyDeleteUser({
       env,
       request,
       actorUserId: actor.id,
-      targetUserId: target.id,
-      action: "user.delete",
-      resourceType: "user",
-      resourceId: target.id,
-      details: { email: target.email, status: "deleted" },
+      target,
+      action: "admin_delete",
     });
 
-    return jsonResponse(request, { ok: true, user: toPublicUser(deleted) });
+    return jsonResponse(request, { ok: true, deletedUser });
   });

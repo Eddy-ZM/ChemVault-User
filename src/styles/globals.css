@@ -252,6 +252,37 @@ textarea {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   }
 
+  .oauth-provider-grid {
+    @apply grid gap-3;
+  }
+
+  .oauth-signin-button {
+    @apply inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold no-underline transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-70;
+    transition-property: background-color, border-color, box-shadow, transform;
+  }
+
+  .oauth-signin-button:hover {
+    @apply shadow-sm;
+    transform: translateY(-1px);
+  }
+
+  .oauth-signin-button:disabled {
+    transform: none;
+  }
+
+  .oauth-signin-button-google,
+  .oauth-signin-button-microsoft {
+    @apply border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50 focus:ring-slate-200;
+  }
+
+  .oauth-signin-button-github {
+    @apply border-slate-950 bg-slate-950 text-white hover:bg-slate-900 focus:ring-slate-300;
+  }
+
+  .oauth-unavailable-note {
+    @apply text-center text-xs font-medium leading-5 text-slate-500;
+  }
+
   .icon-button {
     @apply relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700;
     transition-property: background-color, border-color, color, box-shadow, transform;
@@ -295,6 +326,73 @@ textarea {
 
   .external-identity-card {
     @apply flex flex-col gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .external-accounts-grid {
+    @apply grid gap-3;
+  }
+
+  .permission-summary-grid {
+    @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-5;
+  }
+
+  .permission-summary-grid div {
+    @apply rounded-lg border border-slate-200 bg-slate-50 p-3;
+  }
+
+  .permission-summary-grid span {
+    @apply block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500;
+  }
+
+  .permission-summary-grid strong {
+    @apply mt-1 block text-lg font-semibold text-slate-950;
+  }
+
+  .permission-card,
+  .permission-definition-card {
+    @apply rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition;
+    transition-property: border-color, background-color, box-shadow, transform;
+  }
+
+  .permission-card:hover,
+  .permission-definition-card:hover {
+    @apply border-cyan-200 shadow-card;
+    transform: translateY(-1px);
+  }
+
+  .permission-card h3,
+  .permission-definition-card h3 {
+    @apply text-base font-semibold leading-6 text-slate-950;
+  }
+
+  .permission-card p,
+  .permission-definition-card p {
+    @apply mt-1 text-sm leading-6 text-slate-600;
+  }
+
+  .permission-card-allow {
+    @apply border-emerald-200 bg-emerald-50/40;
+  }
+
+  .permission-card-deny {
+    @apply border-red-200 bg-red-50/40;
+  }
+
+  .permission-outcome {
+    @apply inline-flex min-h-7 items-center rounded-lg px-2.5 text-xs font-semibold ring-1;
+  }
+
+  .permission-outcome-allow {
+    @apply bg-emerald-50 text-emerald-700 ring-emerald-100;
+  }
+
+  .permission-outcome-deny {
+    @apply bg-red-50 text-red-700 ring-red-100;
+  }
+
+  .permission-technical-key {
+    @apply mt-2 text-xs font-medium text-slate-400;
+    word-break: break-word;
   }
 
   .apple-onboarding-page {
@@ -448,11 +546,11 @@ textarea {
   }
 
   .segmented {
-    @apply inline-grid grid-cols-3 rounded-lg border border-slate-200 bg-slate-50 p-1;
+    @apply inline-grid w-full grid-cols-3 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:w-auto;
   }
 
   .segment-button {
-    @apply h-8 rounded-md px-3 text-xs font-semibold text-slate-500 transition hover:text-slate-900;
+    @apply h-8 min-w-0 rounded-md px-2 text-xs font-semibold text-slate-500 transition hover:text-slate-900 sm:min-w-[86px] sm:px-3;
     transition-property: background-color, color, box-shadow, transform;
   }
 

@@ -388,7 +388,7 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
         title: "9. Retention, deletion, and backups",
         paragraphs: [
           "ChemVault retains information for as long as reasonably necessary to provide services, maintain accounts, enforce permissions, preserve audit records, comply with obligations, resolve disputes, prevent abuse, improve security, maintain backups, and support legitimate operational needs.",
-          "Account deletion is generally implemented as soft deletion. A deleted account may be marked deleted and blocked from login while certain records remain for security, audit, fraud prevention, dispute handling, backup, legal, institutional, or compliance reasons.",
+          "Account deletion may remove the active main account record after ChemVault preserves a limited deletion record. Certain operational records may remain when necessary for security, audit, fraud prevention, dispute handling, backup, legal, institutional, or compliance reasons.",
         ],
         clauses: [
           "Profile fields may be updated by the user or an administrator where the interface permits.",

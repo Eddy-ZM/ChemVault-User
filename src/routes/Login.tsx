@@ -7,8 +7,8 @@ import { isEmail, required } from "../lib/validators";
 import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
-import { AppleSignInButton } from "../components/AppleSignInButton";
 import { MailSsoButton } from "../components/MailSsoButton";
+import { OAuthButtonGroup } from "../components/OAuthButtonGroup";
 
 export function Login() {
   const { login } = useAuth();
@@ -18,14 +18,7 @@ export function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const from = (location.state as { from?: string } | null)?.from || "/dashboard";
-  const ssoMessage =
-    searchParams.get("sso") === "mail_not_configured"
-      ? "ChemVault Mail SSO is wired in User Center, but MAIL_SYSTEM_SSO_URL is not configured yet."
-      : searchParams.get("sso") === "apple_not_configured"
-        ? "Apple Account login is wired in User Center, but Apple Developer credentials are not configured yet."
-        : searchParams.get("sso") === "apple_failed"
-          ? "Apple Account login could not be completed. Please try again or use email login."
-      : "";
+  const ssoMessage = getSsoMessage(searchParams.get("sso"));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,8 +82,8 @@ export function Login() {
           or
           <span className="h-px flex-1 bg-slate-200" />
         </div>
+        <OAuthButtonGroup returnTo={from} />
         <MailSsoButton returnTo={from} />
-        <AppleSignInButton returnTo={from} label="Continue with Apple Account" />
         <p className="text-center text-sm text-slate-500">
           New to ChemVault?{" "}
           <Link className="font-semibold text-blue-700" to="/register">
@@ -101,4 +94,33 @@ export function Login() {
       <UserSystemFooter compact />
     </main>
   );
+}
+
+function getSsoMessage(reason: string | null): string {
+  if (!reason) return "";
+  if (reason === "mail_not_configured") {
+    return "ChemVault Mail SSO is wired in User Center, but MAIL_SYSTEM_SSO_URL is not configured yet.";
+  }
+
+  const [provider, ...rest] = reason.split("_");
+  const providerName =
+    provider === "apple"
+      ? "Apple Account"
+      : provider === "google"
+        ? "Google"
+        : provider === "microsoft"
+          ? "Microsoft"
+          : provider === "github"
+            ? "GitHub"
+            : "OAuth";
+  const code = rest.join("_");
+
+  if (provider === "microsoft") return "Microsoft sign-in is temporarily unavailable due to Microsoft-side limitations.";
+  if (code === "not_configured") return `${providerName} login is wired in User Center, but provider credentials are not configured yet.`;
+  if (code === "invalid_state") return `${providerName} login was blocked because the OAuth state was invalid or expired. Please try again.`;
+  if (code === "missing_email") return `${providerName} did not provide an email address. Please use another sign-in method.`;
+  if (code === "email_not_verified") return `${providerName} did not provide a verified email address. Please verify it with the provider first.`;
+  if (code === "account_linked") return `This ${providerName} account is already linked to another ChemVault user.`;
+  if (code === "failed") return `${providerName} login could not be completed. Please try again or use email login.`;
+  return "Third-party sign-in could not be completed. Please try again or use email login.";
 }

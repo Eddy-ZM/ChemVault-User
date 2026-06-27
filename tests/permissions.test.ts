@@ -9,6 +9,7 @@ import {
   makeAuditDetails,
 } from "../functions/_shared/permissions";
 import type { AccessSnapshot, UserRow } from "../functions/_shared/types";
+import { buildDeletedUserRecord } from "../functions/_shared/userDeletion";
 
 const baseUser: UserRow = {
   id: "user_1",
@@ -180,5 +181,21 @@ describe("permission evaluation", () => {
     });
 
     expect(details).toBe(JSON.stringify({ role: "admin" }));
+  });
+
+  it("builds a compact deleted-user record without password data", () => {
+    const record = buildDeletedUserRecord({ ...baseUser, password_hash: "secret-password-hash", source: "apple" });
+
+    expect(record).toEqual({
+      id: "user_1",
+      email: "user@example.com",
+      name: "User",
+      role: "free",
+      systemRole: "user",
+      source: "apple",
+      status: "active",
+      globalStatus: "active",
+    });
+    expect(JSON.stringify(record)).not.toContain("secret-password-hash");
   });
 });

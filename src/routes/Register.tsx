@@ -8,8 +8,8 @@ import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { AgreementModal, type AgreementKind } from "../components/LegalAgreement";
-import { AppleSignInButton } from "../components/AppleSignInButton";
 import { TurnstileWidget } from "../components/TurnstileWidget";
+import { OAuthButtonGroup } from "../components/OAuthButtonGroup";
 
 interface RegisterOptions {
   turnstile: {
@@ -105,7 +105,7 @@ export function Register() {
           <h1>Create account</h1>
           <p>Set up your ChemVault profile for research tools, usage history, and future billing.</p>
         </div>
-        <AppleSignInButton label="Continue with Apple Account" />
+        <OAuthButtonGroup />
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
           or create with email
@@ -160,8 +160,8 @@ export function Register() {
           </span>
         </label>
         <p className="text-xs leading-5 text-slate-500">
-          Continuing with Apple Account creates or signs into a ChemVault main account under the same Terms and
-          Privacy Policy.
+          Continuing with a third-party sign-in provider creates or signs into a ChemVault main account under the same
+          Terms and Privacy Policy.
         </p>
         {registerOptions.turnstile.required ? (
           registerOptions.turnstile.siteKey ? (

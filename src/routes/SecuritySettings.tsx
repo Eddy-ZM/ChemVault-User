@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Eye, EyeOff, Fingerprint, KeyRound, Laptop, LogOut, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Fingerprint, KeyRound, Laptop, LogOut, Trash2, Unlink } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -8,13 +8,42 @@ import { ConfirmDialog } from "../components/Modal";
 import { useToast } from "../components/Toast";
 import { ButtonSpinner, StatusBadge } from "../components/UiPrimitives";
 import { AppleSignInButton } from "../components/AppleSignInButton";
+import { OAuthSignInButton, type OAuthProvider } from "../components/OAuthSignInButton";
 
 interface ExternalIdentity {
   provider: string;
   email: string;
   createdAt: string;
   updatedAt: string;
+  canUnlink?: boolean;
 }
+
+const accountProviders: Array<{
+  key: "apple" | OAuthProvider;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "apple",
+    label: "Apple Account",
+    description: "Use Apple Account sign-in with the existing ChemVault account.",
+  },
+  {
+    key: "google",
+    label: "Google",
+    description: "Use Google OAuth with only openid, email, and profile scopes.",
+  },
+  {
+    key: "microsoft",
+    label: "Microsoft",
+    description: "Temporarily unavailable due to Microsoft-side limitations.",
+  },
+  {
+    key: "github",
+    label: "GitHub",
+    description: "Use GitHub OAuth without repository permissions.",
+  },
+];
 
 export function SecuritySettings() {
   const { notify } = useToast();
@@ -29,15 +58,20 @@ export function SecuritySettings() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [identities, setIdentities] = useState<ExternalIdentity[]>([]);
+  const [unlinkingProvider, setUnlinkingProvider] = useState("");
 
   useEffect(() => {
     void loadExternalIdentities();
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("apple") === "linked") {
-      setMessage("Apple Account linked.");
-      notify({ title: "Apple Account linked", description: "You can now sign in to this account with Apple.", tone: "success" });
+    const sso = searchParams.get("sso");
+    if (searchParams.get("apple") === "linked" || sso?.endsWith("_linked")) {
+      const provider = sso?.replace("_linked", "") || "apple";
+      const label = accountProviders.find((item) => item.key === provider)?.label || "External account";
+      setMessage(`${label} linked.`);
+      notify({ title: `${label} linked`, description: `You can now sign in to this account with ${label}.`, tone: "success" });
+      void loadExternalIdentities();
     }
   }, [notify, searchParams]);
 
@@ -47,6 +81,25 @@ export function SecuritySettings() {
       setIdentities(body.identities);
     } catch {
       setIdentities([]);
+    }
+  }
+
+  async function handleUnlink(provider: string) {
+    setError("");
+    setMessage("");
+    try {
+      setUnlinkingProvider(provider);
+      await apiRequest<{ ok: true }>(`/api/user/external-identities/${provider}`, { method: "DELETE" });
+      await loadExternalIdentities();
+      const label = accountProviders.find((item) => item.key === provider)?.label || "External account";
+      setMessage(`${label} unlinked.`);
+      notify({ title: `${label} unlinked`, tone: "success" });
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "External account unlink failed.";
+      setError(message);
+      notify({ title: "Unlink failed", description: message, tone: "error" });
+    } finally {
+      setUnlinkingProvider("");
     }
   }
 
@@ -105,7 +158,7 @@ export function SecuritySettings() {
     notify({ title: "Coming soon", description: "Logout all devices is reserved for the multi-session device UI.", tone: "info" });
   }
 
-  const appleIdentity = identities.find((identity) => identity.provider === "apple");
+  const identityByProvider = new Map(identities.map((identity) => [identity.provider, identity]));
 
   return (
     <section className="page-section">
@@ -177,33 +230,74 @@ export function SecuritySettings() {
             <Fingerprint className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">External sign-in</h2>
+            <h2 className="text-lg font-semibold text-slate-950">Connected accounts</h2>
             <p className="text-sm text-slate-500">
-              Bind Apple Account to use Apple sign-in with this existing ChemVault account.
+              Bind third-party sign-in providers without changing ChemVault roles, permissions, or administrator status.
             </p>
           </div>
         </div>
-        <div className="external-identity-card">
-          <div>
-            <p className="font-semibold text-slate-950">Apple Account</p>
-            <p className="mt-1 text-sm text-slate-500">
-              {appleIdentity ? `Linked as ${appleIdentity.email}` : "Not linked yet. You will be sent to Apple to confirm ownership."}
-            </p>
-          </div>
-          {appleIdentity ? (
-            <StatusBadge value="active" />
-          ) : (
-            <div className="w-full sm:w-72">
-              <AppleSignInButton mode="link" returnTo="/settings/security?apple=linked" label="Bind Apple Account" />
-            </div>
-          )}
+        <div className="external-accounts-grid">
+          {accountProviders.map((provider) => {
+            const identity = identityByProvider.get(provider.key);
+            return (
+              <div className="external-identity-card" key={provider.key}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-slate-950">{provider.label}</p>
+                    <StatusBadge value={identity ? "connected" : "not connected"} />
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {identity ? `Linked as ${identity.email}` : provider.description}
+                  </p>
+                </div>
+                {identity ? (
+                  <button
+                    className="secondary-button w-full sm:w-auto"
+                    type="button"
+                    onClick={() => void handleUnlink(provider.key)}
+                    disabled={unlinkingProvider === provider.key || identity.canUnlink === false}
+                    title={
+                      identity.canUnlink === false
+                        ? "Add a password or another provider before unlinking the last login method."
+                        : `Unlink ${provider.label}`
+                    }
+                  >
+                    {unlinkingProvider === provider.key ? (
+                      <ButtonSpinner label="Unlinking..." />
+                    ) : (
+                      <>
+                        <Unlink className="h-4 w-4" />
+                        Unlink
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-full sm:w-72">
+                    {provider.key === "apple" ? (
+                      <AppleSignInButton mode="link" returnTo="/settings/security?sso=apple_linked" label="Bind Apple Account" />
+                    ) : (
+                      <OAuthSignInButton
+                        provider={provider.key}
+                        mode="link"
+                        returnTo={`/settings/security?sso=${provider.key}_linked`}
+                        label={`Bind ${provider.label}`}
+                        disabledReason={
+                          provider.key === "microsoft" ? "Temporarily unavailable due to Microsoft-side limitations." : undefined
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="danger-panel">
         <div>
           <h2>Delete account</h2>
-          <p>Soft deletes the user by setting status to deleted, revokes sessions, and keeps audit-friendly records.</p>
+          <p>Deletes this account after keeping one deletion audit record. Linked sign-in providers can create a fresh account later.</p>
         </div>
         <div className="flex flex-col gap-3 sm:min-w-[280px]">
           <input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} placeholder='Type "DELETE"' />
@@ -216,7 +310,7 @@ export function SecuritySettings() {
       <ConfirmDialog
         open={confirmDelete}
         title="Delete this ChemVault account?"
-        description="This is a soft delete, but it immediately signs you out and blocks future login until an administrator restores the account."
+        description="This keeps one deletion record, removes your account and linked sign-in methods, and signs out this browser."
         confirmLabel="Delete account"
         tone="danger"
         busy={deleting}

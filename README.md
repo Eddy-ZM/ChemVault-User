@@ -58,6 +58,19 @@ MAIL_SYSTEM_SSO_SECRET="local-mail-sso-secret"
 # APPLE_REDIRECT_URI="https://user.chemvault.science/api/auth/sso/apple/callback"
 # APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 
+# Optional Google / Microsoft / GitHub OAuth.
+# For local callback testing, set AUTH_URL="http://localhost:3000" and configure
+# provider callback URLs as http://localhost:3000/api/auth/sso/{provider}/callback.
+# AUTH_URL="https://user.chemvault.science"
+# AUTH_SECRET="local-oauth-state-secret"
+# GOOGLE_CLIENT_ID="..."
+# GOOGLE_CLIENT_SECRET="..."
+# MICROSOFT_CLIENT_ID="..."
+# MICROSOFT_CLIENT_SECRET="..."
+# MICROSOFT_TENANT_ID="common"
+# GITHUB_CLIENT_ID="..."
+# GITHUB_CLIENT_SECRET="..."
+
 # Optional local Turnstile testing. Without this, local development skips human verification.
 # TURNSTILE_SITE_KEY="1x00000000000000000000AA"
 # TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
@@ -169,6 +182,8 @@ Apply the main-system migration:
 ```bash
 npx wrangler d1 execute chemvault_user --remote --file db/migrations/002_permissions_mail_system.sql
 npx wrangler d1 execute chemvault_user --remote --file db/migrations/003_external_identities_sso.sql
+npx wrangler d1 execute chemvault_user --remote --file db/migrations/004_oauth_provider_accounts.sql
+npx wrangler d1 execute chemvault_user --remote --file db/migrations/005_purge_soft_deleted_users.sql
 ```
 
 `db/migrations/002_permissions_mail_system.sql`:
@@ -182,7 +197,11 @@ npx wrangler d1 execute chemvault_user --remote --file db/migrations/003_externa
 
 `db/migrations/003_external_identities_sso.sql` creates `external_identities`, which links a main account to ChemVault Mail identities and stores imported mail credential hashes for password compatibility. It stores external password hashes and salts only, never plaintext mail passwords.
 
-The `CREATE TABLE` and `INSERT OR IGNORE` statements are safe to re-run. The `ALTER TABLE users ADD COLUMN ...` statements in migration 002 should be applied once per D1 database.
+`db/migrations/004_oauth_provider_accounts.sql` extends `external_identities` with OAuth-account fields for Google, Microsoft, and GitHub account metadata. Current runtime code does not persist third-party access tokens after login; ChemVault sessions remain independent httpOnly sessions.
+
+`db/migrations/005_purge_soft_deleted_users.sql` converts legacy soft-deleted users into one deletion audit record per user, then removes user-scoped records and deletes the user row so the same email or OAuth identity can register again.
+
+The `CREATE TABLE` and `INSERT OR IGNORE` statements are safe to re-run. The `ALTER TABLE ... ADD COLUMN` statements in migrations 002 and 004 should be applied once per D1 database.
 
 ## Create Admin User
 
@@ -206,13 +225,13 @@ The generated admin has `role='admin'`, `system_role='admin'`, `source='local'`,
 
 ## Admin User Deletion
 
-Admins can soft delete users from `/admin/users` or `/admin/users/:id`. The UI calls:
+Admins can delete users from `/admin/users` or `/admin/users/:id`. The UI calls:
 
 ```text
 DELETE /api/admin/users/:id
 ```
 
-This does not physically remove the row. It sets `status='deleted'` and `global_status='deleted'`, revokes the user's active sessions, and writes `user.delete` to `audit_logs`. Owner accounts cannot be deleted, and ordinary admins cannot delete protected `super_admin` or `owner` users.
+Deletion keeps one audit entry for the deleted user, revokes active sessions, removes linked sign-in providers and user-scoped records, then physically removes the `users` row so the same email or OAuth identity can create a fresh account later. Owner accounts cannot be deleted, and ordinary admins cannot delete protected `super_admin` or `owner` users.
 
 ## Permission Model
 
@@ -408,6 +427,90 @@ Required Apple Developer setup:
 5. Configure Cloudflare Pages variables/secrets listed above, then redeploy.
 
 Until those values are configured, `/api/auth/sso/apple/start` redirects back to `/login?sso=apple_not_configured` instead of failing.
+
+## Third-party OAuth Login Setup
+
+Google, Microsoft, and GitHub sign-in use the same `external_identities` binding model as Apple Account. The provider identity is only used to prove account ownership. ChemVault still creates its own httpOnly session cookie, and third-party access tokens are not used as ChemVault credentials. New third-party users are created as `role='free'` and `system_role='user'`; provider login never grants admin or super-admin status by itself.
+
+Canonical production callback URLs:
+
+```text
+https://user.chemvault.science/api/auth/sso/google/callback
+https://user.chemvault.science/api/auth/sso/microsoft/callback
+https://user.chemvault.science/api/auth/sso/github/callback
+```
+
+Canonical local callback URLs:
+
+```text
+http://localhost:3000/api/auth/sso/google/callback
+http://localhost:3000/api/auth/sso/microsoft/callback
+http://localhost:3000/api/auth/sso/github/callback
+```
+
+Set `AUTH_URL` to the public origin that matches the provider callback being tested. Use `AUTH_URL=https://user.chemvault.science` in production. Use `AUTH_URL=http://localhost:3000` when testing with a local OAuth app configured for localhost.
+
+### Google Cloud Console
+
+1. Open Google Cloud Console and create or select a project.
+2. Configure the OAuth consent screen for the ChemVault User Center application.
+3. Create an OAuth Client ID.
+4. Set Application type to `Web application`.
+5. Add Authorized JavaScript origins:
+   - `https://user.chemvault.science`
+   - `http://localhost:3000` for local testing, if needed
+6. Add Authorized redirect URIs:
+   - `https://user.chemvault.science/api/auth/sso/google/callback`
+   - `http://localhost:3000/api/auth/sso/google/callback` for local testing, if needed
+7. Configure Cloudflare Pages:
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+
+Requested Google scopes are limited to `openid email profile`. Do not add Gmail, Drive, Calendar, or other Google API scopes.
+
+### Microsoft Entra
+
+Microsoft sign-in is currently shown as disabled in the product with this user-facing message: `Temporarily unavailable due to Microsoft-side limitations.` Keep the setup notes below for future activation.
+
+1. Open Microsoft Entra admin center and create an App Registration.
+2. Set Supported account types to personal Microsoft accounts and work/school accounts if ChemVault should accept both.
+3. Add Web redirect URIs:
+   - `https://user.chemvault.science/api/auth/sso/microsoft/callback`
+   - `http://localhost:3000/api/auth/sso/microsoft/callback` for local testing, if needed
+4. Create a client secret.
+5. Add API permissions:
+   - `openid`
+   - `email`
+   - `profile`
+   - `User.Read`
+6. Configure Cloudflare Pages:
+   - `MICROSOFT_CLIENT_ID`
+   - `MICROSOFT_CLIENT_SECRET`
+   - `MICROSOFT_TENANT_ID=common`
+
+Requested Microsoft scopes are limited to identity profile and `User.Read`. Do not add Outlook, OneDrive, Teams, Mail, Files, or Graph write permissions.
+
+### GitHub Developer Settings
+
+GitHub OAuth Apps usually support one Authorization callback URL. For production plus local testing, create two OAuth Apps.
+
+Production OAuth App:
+
+1. Homepage URL: `https://user.chemvault.science`
+2. Authorization callback URL: `https://user.chemvault.science/api/auth/sso/github/callback`
+3. Configure Cloudflare Pages production:
+   - `GITHUB_CLIENT_ID`
+   - `GITHUB_CLIENT_SECRET`
+
+Local development OAuth App:
+
+1. Homepage URL: `http://localhost:3000`
+2. Authorization callback URL: `http://localhost:3000/api/auth/sso/github/callback`
+3. Put the local app credentials in `.dev.vars`.
+
+Requested GitHub scopes are limited to `read:user user:email`. Do not add `repo`, `workflow`, `admin`, package, organization write, or other private-data scopes.
+
+Existing users can connect or disconnect Apple Account, Google, Microsoft, and GitHub from `/settings/security`. If a user has no password login and only one connected sign-in provider, User Center blocks unlinking that final provider to prevent lockout.
 
 ## Mail Admin Sync
 
@@ -613,6 +716,9 @@ Proxy status: Proxied
 - Login as a linked mail-system user with the existing mail password.
 - Open `/api/auth/sso/mail/start` and confirm it redirects to the mail SSO URL, or back to login with `sso=mail_not_configured` if the URL is intentionally unset.
 - Open `/api/auth/sso/apple/start` and confirm it redirects to Apple when Apple variables are configured, or back to login with `sso=apple_not_configured` if credentials are intentionally unset.
+- Open `/api/auth/sso/google/start`, `/api/auth/sso/microsoft/start`, and `/api/auth/sso/github/start` and confirm each redirects to the provider when credentials are configured, or back to login with `{provider}_not_configured` if credentials are intentionally unset.
+- After configuring providers, confirm callbacks use `/api/auth/sso/{provider}/callback`, create or bind a ChemVault user, and set the normal `chemvault_session` cookie.
+- From `/settings/security`, bind and unlink Google, Microsoft, and GitHub. Confirm unlinking the final available login method is blocked.
 - Open `/admin/users`, `/admin/permissions`, `/admin/mail`, `/admin/mail-sync`.
 - Give a user `page:file:view`, `service:chemvault_file`, and `file:read`.
 - Confirm `/api/access/check?service=chemvault_file&page=file` returns `allowed: true`.

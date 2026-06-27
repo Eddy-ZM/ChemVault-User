@@ -25,6 +25,15 @@ export interface Env {
   APPLE_KEY_ID?: string;
   APPLE_PRIVATE_KEY?: string;
   APPLE_REDIRECT_URI?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  MICROSOFT_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_SECRET?: string;
+  MICROSOFT_TENANT_ID?: string;
+  GITHUB_CLIENT_ID?: string;
+  GITHUB_CLIENT_SECRET?: string;
+  AUTH_SECRET?: string;
+  AUTH_URL?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_EXPECTED_HOSTNAME?: string;
@@ -147,6 +156,10 @@ export interface ExternalIdentityRow {
   credential_hash: string | null;
   credential_salt: string | null;
   credential_algorithm: string | null;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  expires_at?: string | null;
+  avatar_url?: string | null;
   metadata: string | null;
   created_at: string;
   updated_at: string;

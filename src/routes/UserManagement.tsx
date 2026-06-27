@@ -137,8 +137,8 @@ export function UserManagement() {
   async function deleteUser(user: User) {
     setSavingUserId(user.id);
     try {
-      const response = await apiRequest<{ ok: true; user: User }>(`/api/admin/users/${user.id}`, { method: "DELETE" });
-      setUsers((current) => current.map((item) => (item.id === user.id ? { ...item, ...response.user } : item)));
+      await apiRequest<{ ok: true; deletedUser: { id: string; email: string } }>(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      setUsers((current) => current.filter((item) => item.id !== user.id));
       notify({ title: "User deleted", description: user.email, tone: "warning" });
       setDeleteTarget(null);
     } catch (err) {
@@ -315,7 +315,7 @@ export function UserManagement() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete user?"
-        description={deleteTarget ? `This will soft delete ${deleteTarget.email}, revoke active sessions, and preserve audit records.` : ""}
+        description={deleteTarget ? `This will keep one deletion audit record for ${deleteTarget.email}, revoke sessions, remove provider links, and delete the user account.` : ""}
         confirmLabel="Delete user"
         tone="danger"
         busy={savingUserId === deleteTarget?.id}

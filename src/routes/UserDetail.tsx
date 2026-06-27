@@ -54,7 +54,7 @@ export function UserDetail() {
     if (!detail) return;
     try {
       setDeleting(true);
-      await apiRequest<{ ok: true; user: User }>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
+      await apiRequest<{ ok: true; deletedUser: { id: string; email: string } }>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
       notify({ title: "User deleted", description: detail.user.email, tone: "warning" });
       navigate("/admin/users", { replace: true });
     } catch (err) {
@@ -158,7 +158,7 @@ export function UserDetail() {
       <ConfirmDialog
         open={confirmDelete}
         title="Delete this user?"
-        description={`This will soft delete ${detail.user.email}, revoke active sessions, and preserve audit records.`}
+        description={`This will keep one deletion audit record for ${detail.user.email}, revoke sessions, remove provider links, and delete the user account.`}
         confirmLabel="Delete user"
         tone="danger"
         busy={deleting}
