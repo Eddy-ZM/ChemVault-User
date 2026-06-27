@@ -8,6 +8,10 @@ const allowedOrigins = new Set([
   "https://molecule.chemvault.science",
   "https://notif.chemvault.science",
   "https://chemvault.science",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:8788",
+  "http://127.0.0.1:8788",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ]);
