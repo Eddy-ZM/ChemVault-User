@@ -17,6 +17,7 @@ export interface Env {
   MAIL_SYSTEM_SYNC_SECRET?: string;
   MAIL_SYSTEM_SSO_SECRET?: string;
   MAIL_SYSTEM_SSO_URL?: string;
+  MAIL_SYSTEM_PASSWORD_VERIFY_URL?: string;
   MAIL_APPLICATION_FROM?: string;
   MAIL_APPLICATION_TO?: string;
   CLOUDFLARE_EMAIL_ACCOUNT_ID?: string;

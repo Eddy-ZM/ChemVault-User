@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildAppleAuthorizeRedirect, buildAppleClientOptions, hasAppleSsoConfig } from "../functions/_shared/appleAuth";
-import { signMailSsoAssertion, verifyMailPassword, verifyMailSsoAssertion } from "../functions/_shared/externalAuth";
+import {
+  buildMailPasswordVerifyUrl,
+  signMailSsoAssertion,
+  verifyMailPassword,
+  verifyMailSsoAssertion,
+  verifyMailSystemPassword,
+} from "../functions/_shared/externalAuth";
 import {
   buildOAuthAuthorizationUrl,
   normalizeGoogleProfileForTest,
@@ -50,6 +56,44 @@ describe("external mail auth", () => {
     });
 
     await expect(verifyMailSsoAssertion(env, { ...assertion, name: "Tampered" })).rejects.toThrow("Mail SSO signature is invalid.");
+  });
+
+  it("builds and uses the mail password verification endpoint", async () => {
+    const env = {
+      MAIL_SYSTEM_SSO_SECRET: "shared-secret",
+      MAIL_SYSTEM_SSO_URL: "https://mail.chemvault.science/api/sso/chemvault-user/authorize",
+    } as Env;
+    expect(buildMailPasswordVerifyUrl(env)).toBe("https://mail.chemvault.science/api/internal/user-center/password-login");
+
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetcher = async (url: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return new Response(
+        JSON.stringify({
+          code: 200,
+          data: {
+            email: "Zikun.Wang@ChemVault.Science",
+            name: "zikun.wang",
+            mailUserId: "14",
+            mailRole: "mailbox_super",
+            mailStatus: "active",
+            canSend: true,
+            canReceive: true,
+            canLoginMail: true,
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    };
+
+    await expect(verifyMailSystemPassword(env, "zikun.wang@chemvault.science", "secret", fetcher)).resolves.toMatchObject({
+      email: "zikun.wang@chemvault.science",
+      mailUserId: "14",
+      mailRole: "mailbox_super",
+    });
+    expect(calls[0].url).toBe("https://mail.chemvault.science/api/internal/user-center/password-login");
+    expect((calls[0].init?.headers as Record<string, string>)["x-chemvault-sso-secret"]).toBe("shared-secret");
+    expect(String(calls[0].init?.body)).toContain("zikun.wang@chemvault.science");
   });
 
   it("redirects Apple SSO start back to login when Apple credentials are not configured", async () => {

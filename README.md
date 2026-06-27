@@ -601,6 +601,14 @@ npx wrangler secret put USER_SYSTEM_SYNC_SECRET --config mail-worker/wrangler.to
 
 The value must be identical to the User Center `MAIL_SYSTEM_SYNC_SECRET`. `chemvault_user_sync_url` may remain the default production endpoint unless you are testing against a local User Center.
 
+Mail users can also use their ChemVault Mail password on the User Center email/password login form. User Center first verifies its local password hash, then any locally stored external Mail credential, then delegates to the protected Mail Worker endpoint:
+
+```text
+POST https://mail.chemvault.science/api/internal/user-center/password-login
+```
+
+This delegation is server-to-server only and uses the same shared Mail SSO/sync secret. User Center does not store or expose the submitted Mail password.
+
 ## Admin Console Pages
 
 - `/admin`: control-plane dashboard, stats, recent audit logs

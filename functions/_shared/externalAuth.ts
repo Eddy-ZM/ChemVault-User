@@ -20,6 +20,20 @@ export interface MailSsoAssertion {
   returnTo?: string;
 }
 
+export interface MailPasswordAuthResult {
+  email: string;
+  name: string;
+  mailUserId: string | null;
+  mailAddress: string;
+  mailRole: "mailbox_user" | "mailbox_admin" | "mailbox_super";
+  mailStatus: "active" | "disabled" | "suspended" | "deleted";
+  canSend: boolean;
+  canReceive: boolean;
+  canLoginMail: boolean;
+  mailboxQuotaMb: number;
+  aliases: string[];
+}
+
 export async function verifyExternalPassword(db: D1Database, user: UserRow, password: string): Promise<boolean> {
   const identity = await db
     .prepare(
@@ -40,6 +54,88 @@ export async function verifyMailPassword(password: string, salt: string, storedH
   const digest = await crypto.subtle.digest("SHA-256", data);
   const actual = toBase64(new Uint8Array(digest));
   return constantTimeStringEqual(actual, storedHash);
+}
+
+export async function verifyMailSystemPassword(
+  env: Env,
+  email: string,
+  password: string,
+  fetcher: typeof fetch = fetch,
+): Promise<MailPasswordAuthResult | null> {
+  const endpoint = buildMailPasswordVerifyUrl(env);
+  const secret = env.MAIL_SYSTEM_SSO_SECRET || env.MAIL_SYSTEM_SYNC_SECRET;
+  if (!endpoint || !secret) return null;
+
+  let response: Response;
+  try {
+    response = await fetcher(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-chemvault-sso-secret": secret,
+      },
+      body: JSON.stringify({ email: normalizeEmail(email), password }),
+    });
+  } catch (error) {
+    console.error("Mail password verification request failed", error instanceof Error ? error.message : String(error));
+    return null;
+  }
+
+  if (response.status === 401 || response.status === 403 || response.status === 404) return null;
+  if (!response.ok) {
+    console.error("Mail password verification returned an unexpected status", response.status);
+    return null;
+  }
+
+  const body = await response.json().catch(() => null) as { code?: number; data?: Record<string, unknown> } | null;
+  if (!body || body.code !== 200 || !body.data) return null;
+  return normalizeMailPasswordAuthResult(body.data);
+}
+
+export function buildMailPasswordVerifyUrl(env: Env): string | null {
+  if (env.MAIL_SYSTEM_PASSWORD_VERIFY_URL) return env.MAIL_SYSTEM_PASSWORD_VERIFY_URL;
+  const source = env.MAIL_SYSTEM_SSO_URL || "https://mail.chemvault.science/api/sso/chemvault-user/authorize";
+  try {
+    const url = new URL(source);
+    return `${url.origin}/api/internal/user-center/password-login`;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeMailPasswordAuthResult(data: Record<string, unknown>): MailPasswordAuthResult | null {
+  const email = normalizeEmail(String(data.email || ""));
+  const mailAddress = normalizeEmail(String(data.mailAddress || data.mail_address || email));
+  if (!validateEmail(email) || !validateEmail(mailAddress)) return null;
+
+  const role = data.mailRole || data.mail_role;
+  const status = data.mailStatus || data.mail_status;
+  const mailRole =
+    role === "mailbox_admin" || role === "mailbox_super" || role === "mailbox_user"
+      ? role
+      : "mailbox_user";
+  const mailStatus =
+    status === "disabled" || status === "suspended" || status === "deleted" || status === "active"
+      ? status
+      : "active";
+  const aliases = Array.isArray(data.aliases)
+    ? data.aliases.filter((item): item is string => typeof item === "string").map((item) => normalizeEmail(item)).filter(validateEmail)
+    : [];
+  const quota = Number(data.mailboxQuotaMb || data.mailbox_quota_mb || 1024);
+
+  return {
+    email,
+    name: typeof data.name === "string" && data.name.trim() ? data.name.trim().slice(0, 160) : email.split("@")[0] || email,
+    mailUserId: typeof data.mailUserId === "string" ? data.mailUserId : typeof data.mail_user_id === "string" ? data.mail_user_id : null,
+    mailAddress,
+    mailRole,
+    mailStatus,
+    canSend: data.canSend !== false && data.can_send !== false,
+    canReceive: data.canReceive !== false && data.can_receive !== false,
+    canLoginMail: data.canLoginMail !== false && data.can_login_mail !== false,
+    mailboxQuotaMb: Number.isInteger(quota) && quota >= 0 ? quota : 1024,
+    aliases,
+  };
 }
 
 export async function getMailSsoSecret(env: Env): Promise<string> {
