@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type { User } from "../lib/types";
+import { AppleLogoMark } from "./AppleLogoMark";
 import { ButtonSpinner } from "./UiPrimitives";
 
 interface AppleAuthResponse {
@@ -138,7 +139,7 @@ export function AppleSignInButton({
     <div className="grid gap-2">
       <button className="apple-signin-button" type="button" onClick={() => void startPopupSignIn()} disabled={busy}>
         <span className="apple-signin-mark" aria-hidden="true">
-          A
+          <AppleLogoMark />
         </span>
         <span className="inline-flex items-center gap-2">{busy ? <ButtonSpinner label="Opening Apple Account..." /> : label}</span>
       </button>

@@ -2,6 +2,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BrandLogo } from "../components/BrandLogo";
+import { AppleLogoMark } from "../components/AppleLogoMark";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
@@ -76,7 +77,7 @@ export function AppleOnboarding() {
         <div className="apple-account-strip">
           <div className="apple-signin-button apple-signin-button-static">
             <span className="apple-signin-mark" aria-hidden="true">
-              A
+              <AppleLogoMark />
             </span>
             <span>Apple Account connected</span>
           </div>

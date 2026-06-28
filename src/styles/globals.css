@@ -248,8 +248,11 @@ textarea {
   }
 
   .apple-signin-mark {
-    @apply -mt-0.5 text-[21px] leading-none;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    @apply inline-flex h-5 w-5 shrink-0 items-center justify-center leading-none;
+  }
+
+  .apple-signin-mark svg {
+    @apply h-full w-full;
   }
 
   .oauth-provider-grid {
