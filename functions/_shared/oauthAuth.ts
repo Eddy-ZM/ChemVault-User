@@ -178,7 +178,12 @@ export async function completeOAuthCallback(input: {
   }
 
   const user = await upsertOAuthUser(input.env, profile);
-  return await completeSsoLogin({ env: input.env, request: input.request, user, returnTo: state.returnTo });
+  return await completeSsoLogin({
+    env: input.env,
+    request: input.request,
+    user,
+    returnTo: mailOnboardingReturnTo(state.returnTo, profile.provider),
+  });
 }
 
 export function oauthFailureReason(provider: OAuthProvider, error: unknown): string {
@@ -617,6 +622,12 @@ function sanitizeReturnTo(value?: string | null): string {
   if (!value || typeof value !== "string") return "/dashboard";
   if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   return value;
+}
+
+function mailOnboardingReturnTo(returnTo: string, provider: OAuthProvider): string {
+  if (provider !== "google" && provider !== "github") return returnTo;
+  const params = new URLSearchParams({ returnTo, provider });
+  return `/onboarding/mail?${params.toString()}`;
 }
 
 function cleanName(value: unknown, email: string, fallback: string): string {

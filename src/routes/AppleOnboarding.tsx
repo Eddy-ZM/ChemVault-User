@@ -1,18 +1,21 @@
 import { FormEvent, useMemo, useState } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
 import { ButtonSpinner } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 import { ApiClientError, apiRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { getSafeReturnTo } from "../lib/returnTo";
 import type { User } from "../lib/types";
 
 export function AppleOnboarding() {
   const { user, setUser } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = getSafeReturnTo(searchParams.get("returnTo"));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -42,7 +45,8 @@ export function AppleOnboarding() {
       });
       setUser(body.user);
       notify({ title: "Profile completed", description: "Your Apple sign-in account is ready.", tone: "success" });
-      navigate("/dashboard", { replace: true });
+      const params = new URLSearchParams({ returnTo, provider: "apple" });
+      navigate(`/onboarding/mail?${params.toString()}`, { replace: true });
     } catch (err) {
       const message = err instanceof ApiClientError ? err.message : "Profile completion failed.";
       setError(message);
@@ -72,7 +76,7 @@ export function AppleOnboarding() {
         <div className="apple-account-strip">
           <div className="apple-signin-button apple-signin-button-static">
             <span className="apple-signin-mark" aria-hidden="true">
-              
+              A
             </span>
             <span>Apple Account connected</span>
           </div>
@@ -112,7 +116,7 @@ export function AppleOnboarding() {
               <ButtonSpinner label="Saving profile..." />
             ) : (
               <>
-                Continue to dashboard
+                Continue
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

@@ -1,9 +1,9 @@
 import { createSession, sessionCookie } from "./auth";
 import { getUserByEmail, getUserById, insertDefaultServices, toPublicUser } from "./db";
-import { loadUserMailAccount, toPublicMailAccount } from "./permissions";
+import { loadUserMailAccount, toPublicMailAccount, writeAuditLog } from "./permissions";
 import { ApiError, jsonResponse } from "./responses";
 import { randomId } from "./security";
-import type { Env, ExternalIdentityRow, MailAccountRow, UserRow } from "./types";
+import type { Env, ExternalIdentityRow, MailAccountRow, PublicMailAccount, SystemRole, UserRow } from "./types";
 import { normalizeEmail, validateEmail } from "./validators";
 
 const encoder = new TextEncoder();
@@ -263,6 +263,59 @@ export async function upsertMailSsoUser(env: Env, assertion: { email: string; na
   return user;
 }
 
+export async function bindVerifiedMailAccount(input: {
+  env: Env;
+  request: Request;
+  user: UserRow;
+  mail: MailPasswordAuthResult;
+}): Promise<PublicMailAccount> {
+  const mailAddress = normalizeEmail(input.mail.mailAddress || input.mail.email);
+  if (!validateEmail(mailAddress) || !mailAddress.endsWith("@chemvault.science")) {
+    throw new ApiError("VALIDATION_ERROR", "A valid @chemvault.science mailbox is required.", 400);
+  }
+  if (input.mail.mailStatus === "deleted" || !input.mail.canLoginMail) {
+    throw new ApiError("FORBIDDEN", "This ChemVault Mail account cannot be bound for login.", 403);
+  }
+
+  const existingForUser = await loadUserMailAccount(input.env.DB, input.user.id);
+  if (existingForUser && existingForUser.mailAddress !== mailAddress) {
+    throw new ApiError("VALIDATION_ERROR", "This ChemVault account already has a different mailbox.", 409);
+  }
+
+  const existingByAddress = await input.env.DB.prepare(`SELECT * FROM mail_accounts WHERE mail_address = ? LIMIT 1`)
+    .bind(mailAddress)
+    .first<MailAccountRow>();
+  if (existingByAddress && existingByAddress.user_id !== input.user.id) {
+    throw new ApiError("VALIDATION_ERROR", "This mailbox is already bound to another ChemVault account.", 409);
+  }
+
+  await assertMailIdentityAvailable(input.env.DB, input.user.id, input.mail);
+
+  const now = new Date().toISOString();
+  await upsertBoundMailIdentity(input.env.DB, input.user.id, input.mail, now);
+  await updateUserRoleFromMail(input.env.DB, input.user, input.mail.mailRole, now);
+  const row = await upsertBoundMailAccount(input.env.DB, input.user.id, input.mail, now, existingByAddress || null);
+  await upsertMailAccess(input.env.DB, input.user.id, input.mail, now);
+
+  await writeAuditLog({
+    env: input.env,
+    request: input.request,
+    actorUserId: input.user.id,
+    targetUserId: input.user.id,
+    action: "mail_account.bind",
+    resourceType: "mail_account",
+    resourceId: row.id,
+    details: {
+      mailAddress,
+      mailUserId: input.mail.mailUserId,
+      mailRole: input.mail.mailRole,
+      mailStatus: input.mail.mailStatus,
+    },
+  });
+
+  return toPublicMailAccount(row);
+}
+
 export async function completeSsoLogin(input: {
   env: Env;
   request: Request;
@@ -313,6 +366,217 @@ async function upsertMailIdentity(
         updated_at = excluded.updated_at`,
     )
     .bind(randomId("ext"), input.userId, mailProvider, input.mailUserId || null, input.email, input.now, input.now)
+    .run();
+}
+
+async function assertMailIdentityAvailable(db: D1Database, userId: string, mail: MailPasswordAuthResult): Promise<void> {
+  if (mail.mailUserId) {
+    const existingByUserId = await db
+      .prepare(`SELECT user_id FROM external_identities WHERE provider = ? AND provider_user_id = ? LIMIT 1`)
+      .bind(mailProvider, mail.mailUserId)
+      .first<{ user_id: string }>();
+    if (existingByUserId?.user_id && existingByUserId.user_id !== userId) {
+      throw new ApiError("VALIDATION_ERROR", "This ChemVault Mail identity is already linked to another account.", 409);
+    }
+  }
+
+  const existingByEmail = await db
+    .prepare(`SELECT user_id FROM external_identities WHERE provider = ? AND provider_email = ? LIMIT 1`)
+    .bind(mailProvider, normalizeEmail(mail.mailAddress || mail.email))
+    .first<{ user_id: string }>();
+  if (existingByEmail?.user_id && existingByEmail.user_id !== userId) {
+    throw new ApiError("VALIDATION_ERROR", "This ChemVault Mail address is already linked to another account.", 409);
+  }
+}
+
+async function upsertBoundMailIdentity(db: D1Database, userId: string, mail: MailPasswordAuthResult, now: string): Promise<void> {
+  const metadata = JSON.stringify({
+    source: "mail_password_binding",
+    mailRole: mail.mailRole,
+    mailStatus: mail.mailStatus,
+  });
+  const providerEmail = normalizeEmail(mail.mailAddress || mail.email);
+
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO external_identities (
+        id, user_id, provider, provider_user_id, provider_email, credential_hash,
+        credential_salt, credential_algorithm, metadata, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
+    )
+    .bind(randomId("ext"), userId, mailProvider, mail.mailUserId || null, providerEmail, metadata, now, now)
+    .run();
+
+  await db
+    .prepare(
+      `UPDATE external_identities
+       SET user_id = ?,
+        provider_user_id = COALESCE(?, provider_user_id),
+        metadata = ?,
+        updated_at = ?
+       WHERE provider = ? AND provider_email = ?`,
+    )
+    .bind(userId, mail.mailUserId || null, metadata, now, mailProvider, providerEmail)
+    .run();
+
+  if (mail.mailUserId) {
+    await db
+      .prepare(
+        `UPDATE external_identities
+         SET user_id = ?,
+          provider_email = ?,
+          metadata = ?,
+          updated_at = ?
+         WHERE provider = ? AND provider_user_id = ?`,
+      )
+      .bind(userId, providerEmail, metadata, now, mailProvider, mail.mailUserId)
+      .run();
+  }
+}
+
+async function updateUserRoleFromMail(db: D1Database, user: UserRow, mailRole: MailPasswordAuthResult["mailRole"], now: string): Promise<void> {
+  const targetSystemRole = systemRoleForMailRole(mailRole);
+  if (targetSystemRole === "user") return;
+
+  const nextSystemRole = nextBoundSystemRole(user.system_role, targetSystemRole);
+  const nextRole = nextSystemRole === "user" ? user.role : "admin";
+  await db
+    .prepare(
+      `UPDATE users
+       SET role = ?,
+        system_role = ?,
+        updated_at = ?
+       WHERE id = ?`,
+    )
+    .bind(nextRole, nextSystemRole, now, user.id)
+    .run();
+}
+
+function systemRoleForMailRole(mailRole: MailPasswordAuthResult["mailRole"]): SystemRole {
+  if (mailRole === "mailbox_super") return "super_admin";
+  if (mailRole === "mailbox_admin") return "admin";
+  return "user";
+}
+
+function nextBoundSystemRole(current: SystemRole, incoming: SystemRole): SystemRole {
+  if (current === "owner") return "owner";
+  if (current === "super_admin" || incoming === "super_admin") return "super_admin";
+  if (current === "admin" || incoming === "admin") return "admin";
+  return current;
+}
+
+async function upsertBoundMailAccount(
+  db: D1Database,
+  userId: string,
+  mail: MailPasswordAuthResult,
+  now: string,
+  existing: MailAccountRow | null,
+): Promise<MailAccountRow> {
+  const mailAddress = normalizeEmail(mail.mailAddress || mail.email);
+  const displayName = mail.name || mailAddress.split("@")[0] || mailAddress;
+  const aliases = JSON.stringify(mail.aliases || []);
+
+  if (existing) {
+    await db
+      .prepare(
+        `UPDATE mail_accounts
+         SET user_id = ?,
+          mail_display_name = ?,
+          mail_role = ?,
+          mail_status = ?,
+          can_send = ?,
+          can_receive = ?,
+          can_login_mail = ?,
+          mailbox_quota_mb = ?,
+          aliases = ?,
+          updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(
+        userId,
+        displayName,
+        mail.mailRole,
+        mail.mailStatus,
+        mail.canSend ? 1 : 0,
+        mail.canReceive ? 1 : 0,
+        mail.canLoginMail ? 1 : 0,
+        mail.mailboxQuotaMb,
+        aliases,
+        now,
+        existing.id,
+      )
+      .run();
+    const row = await db.prepare(`SELECT * FROM mail_accounts WHERE id = ? LIMIT 1`).bind(existing.id).first<MailAccountRow>();
+    if (!row) throw new ApiError("INTERNAL_ERROR", "Bound mail account could not be loaded.", 500);
+    return row;
+  }
+
+  const id = randomId("mail");
+  await db
+    .prepare(
+      `INSERT INTO mail_accounts (
+        id, user_id, mail_address, mail_display_name, mail_role, mail_status,
+        can_send, can_receive, can_login_mail, mailbox_quota_mb, aliases, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      id,
+      userId,
+      mailAddress,
+      displayName,
+      mail.mailRole,
+      mail.mailStatus,
+      mail.canSend ? 1 : 0,
+      mail.canReceive ? 1 : 0,
+      mail.canLoginMail ? 1 : 0,
+      mail.mailboxQuotaMb,
+      aliases,
+      now,
+      now,
+    )
+    .run();
+
+  const row = await db.prepare(`SELECT * FROM mail_accounts WHERE id = ? LIMIT 1`).bind(id).first<MailAccountRow>();
+  if (!row) throw new ApiError("INTERNAL_ERROR", "Bound mail account could not be loaded.", 500);
+  return row;
+}
+
+async function upsertMailAccess(db: D1Database, userId: string, mail: MailPasswordAuthResult, now: string): Promise<void> {
+  const accessStatus = mail.mailStatus === "active" ? "active" : "disabled";
+  const existingService = await db.prepare(`SELECT id FROM service_access WHERE user_id = ? AND service_key = ? LIMIT 1`)
+    .bind(userId, "chemvault_mail")
+    .first<{ id: string }>();
+  if (existingService) {
+    await db.prepare(`UPDATE service_access SET status = ?, updated_at = ? WHERE id = ?`)
+      .bind(accessStatus, now, existingService.id)
+      .run();
+  } else {
+    await db
+      .prepare(
+        `INSERT INTO service_access (id, user_id, service_key, status, granted_by, created_at, updated_at)
+         VALUES (?, ?, 'chemvault_mail', ?, NULL, ?, ?)`,
+      )
+      .bind(randomId("svcaccess"), userId, accessStatus, now, now)
+      .run();
+  }
+
+  await setPermission(db, userId, "mail:access", mail.mailStatus === "active", now);
+  await setPermission(db, userId, "mail:send", mail.canSend && mail.mailStatus === "active", now);
+  await setPermission(db, userId, "mail:receive", mail.canReceive && mail.mailStatus === "active", now);
+}
+
+async function setPermission(db: D1Database, userId: string, key: string, allowed: boolean, now: string): Promise<void> {
+  if (!allowed) {
+    await db.prepare(`DELETE FROM user_permissions WHERE user_id = ? AND permission_key = ?`).bind(userId, key).run();
+    return;
+  }
+
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO user_permissions (id, user_id, permission_key, effect, granted_by, created_at)
+       VALUES (COALESCE((SELECT id FROM user_permissions WHERE user_id = ? AND permission_key = ?), ?), ?, ?, 'allow', NULL, ?)`,
+    )
+    .bind(userId, key, randomId("uperm"), userId, key, now)
     .run();
 }
 

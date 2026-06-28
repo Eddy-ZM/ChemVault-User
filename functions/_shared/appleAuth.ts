@@ -168,7 +168,7 @@ export async function completeAppleCallback(input: {
   }
 
   const result = await upsertAppleUser(input.env, appleIdentity);
-  const returnTo = result.isNewAccount ? "/onboarding/apple" : state.returnTo;
+  const returnTo = result.isNewAccount ? appleProfileOnboardingReturnTo(state.returnTo) : mailOnboardingReturnTo(state.returnTo);
 
   return await completeSsoLogin({ env: input.env, request: input.request, user: result.user, returnTo });
 }
@@ -465,6 +465,16 @@ function sanitizeReturnTo(value?: string | null): string {
   if (!value || typeof value !== "string") return "/dashboard";
   if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   return value;
+}
+
+function appleProfileOnboardingReturnTo(returnTo: string): string {
+  const params = new URLSearchParams({ returnTo });
+  return `/onboarding/apple?${params.toString()}`;
+}
+
+function mailOnboardingReturnTo(returnTo: string): string {
+  const params = new URLSearchParams({ returnTo, provider: "apple" });
+  return `/onboarding/mail?${params.toString()}`;
 }
 
 function base64UrlEncodeJson(value: unknown): string {

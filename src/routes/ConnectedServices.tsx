@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { MailPlus, RefreshCw, Search } from "lucide-react";
+import { KeyRound, MailPlus, RefreshCw, Search } from "lucide-react";
+import { Link } from "react-router-dom";
 import { ServiceCard } from "../components/ServiceCard";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { ConnectedService } from "../lib/types";
@@ -160,9 +161,15 @@ export function ConnectedServices() {
             </label>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="inline-help">Requests are emailed to it.apply@chemvault.science for manual review.</p>
-              <button className="primary-button" type="submit" disabled={mailApplying}>
-                {mailApplying ? <ButtonSpinner label="Sending request..." /> : "Request mailbox"}
-              </button>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Link className="secondary-button" to={`/onboarding/mail?returnTo=${encodeURIComponent("/services")}&provider=${encodeURIComponent(user?.source || "account")}`}>
+                  <KeyRound className="h-4 w-4" />
+                  Bind existing mailbox
+                </Link>
+                <button className="primary-button" type="submit" disabled={mailApplying}>
+                  {mailApplying ? <ButtonSpinner label="Sending request..." /> : "Request mailbox"}
+                </button>
+              </div>
             </div>
           </form>
         )}

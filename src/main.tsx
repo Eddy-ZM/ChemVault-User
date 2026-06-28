@@ -10,6 +10,7 @@ import { Login } from "./routes/Login";
 import { Register } from "./routes/Register";
 import { LegalDocumentPage } from "./routes/LegalDocumentPage";
 import { AppleOnboarding } from "./routes/AppleOnboarding";
+import { MailOnboarding } from "./routes/MailOnboarding";
 import { Dashboard } from "./routes/Dashboard";
 import { ProfileSettings } from "./routes/ProfileSettings";
 import { SecuritySettings } from "./routes/SecuritySettings";
@@ -42,6 +43,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/privacy" element={<LegalDocumentPage kind="privacy" />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/onboarding/apple" element={<AppleOnboarding />} />
+              <Route path="/onboarding/mail" element={<MailOnboarding />} />
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/services" element={<ConnectedServices />} />

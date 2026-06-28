@@ -300,7 +300,17 @@ DELETE /api/admin/mail/accounts/:id
 
 `DELETE` is a soft delete.
 
-Users who signed in through Apple Account, email registration, or another non-mail identity can request a ChemVault mailbox from `/services`. The user-facing API is:
+Users who signed in through Apple Account, Google, GitHub, email registration, or another non-mail identity can bind or request a ChemVault mailbox from `/onboarding/mail` or `/services`.
+
+Existing ChemVault Mail users can bind their mailbox after Mail password verification:
+
+```text
+POST /api/user/mail-binding
+```
+
+`POST /api/user/mail-binding` accepts a `mailAddress` and Mail password, verifies them through the Mail Worker internal `/api/internal/user-center/password-login` endpoint, rejects mailboxes already bound to another main account, creates the `chemvault_mail` external identity, upserts the `mail_accounts` row, grants active mail access permissions, and writes `mail_account.bind` to `audit_logs`. The Mail password is never stored by User Center.
+
+Users without a mailbox can request one:
 
 ```text
 POST /api/user/mail-application
@@ -455,6 +465,8 @@ http://localhost:3000/api/auth/sso/github/callback
 ```
 
 Set `AUTH_URL` to the public origin that matches the provider callback being tested. Use `AUTH_URL=https://user.chemvault.science` in production. Use `AUTH_URL=http://localhost:3000` when testing with a local OAuth app configured for localhost.
+
+After Apple Account, Google, or GitHub sign-in, User Center redirects users without an assigned mailbox to `/onboarding/mail`. The page asks whether they already have a `@chemvault.science` mailbox. Existing Mail users can bind it immediately with their Mail password; users without one can send a mailbox application email to `MAIL_APPLICATION_TO` (default `it.apply@chemvault.science`) or continue without a mailbox.
 
 ### Google Cloud Console
 
