@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildMailSsoDestination } from "../functions/api/auth/sso/mail/start";
 import { buildAppleAuthorizeRedirect, buildAppleClientOptions, hasAppleSsoConfig } from "../functions/_shared/appleAuth";
 import {
   buildMailPasswordVerifyUrl,
@@ -40,6 +41,7 @@ describe("external mail auth", () => {
       mailUserId: "42",
       iat,
       nonce: "nonce-123",
+      returnTo: "https://file.chemvault.science/?project=spectra",
       signature: await signMailSsoAssertion("test-secret", {
         email: "user@chemvault.science",
         name: "Mail User",
@@ -53,9 +55,23 @@ describe("external mail auth", () => {
       email: "user@chemvault.science",
       name: "Mail User",
       mailUserId: "42",
+      returnTo: "https://file.chemvault.science/?project=spectra",
     });
 
     await expect(verifyMailSsoAssertion(env, { ...assertion, name: "Tampered" })).rejects.toThrow("Mail SSO signature is invalid.");
+  });
+
+  it("preserves ChemVault service return targets in Mail SSO redirects", () => {
+    const destination = buildMailSsoDestination(
+      {
+        MAIL_SYSTEM_SSO_URL: "https://mail.chemvault.science/api/sso/chemvault-user/authorize",
+      } as Env,
+      new Request("https://user.chemvault.science/api/auth/sso/mail/start"),
+      "https://file.chemvault.science/?project=spectra",
+    );
+
+    expect(destination.searchParams.get("return_to")).toBe("https://file.chemvault.science/?project=spectra");
+    expect(destination.searchParams.get("sso")).toBe("chemvault-user");
   });
 
   it("builds and uses the mail password verification endpoint", async () => {

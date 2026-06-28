@@ -1,4 +1,5 @@
 import { ApiError, handleApi, jsonResponse, readJson } from "../../../../_shared/responses";
+import { sanitizeReturnTo } from "../../../../_shared/returnTo";
 import { mailSsoTurnstileAction, verifyTurnstileToken } from "../../../../_shared/turnstile";
 import type { Env } from "../../../../_shared/types";
 
@@ -42,15 +43,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
     return jsonResponse(request, { url: buildMailSsoDestination(env, request, returnTo).toString() });
   });
 
-function sanitizeReturnTo(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
-  return value;
-}
-
-function buildMailSsoDestination(env: Env, request: Request, returnTo: string | null): URL {
+export function buildMailSsoDestination(env: Env, request: Request, returnTo: string | null): URL {
   const requestUrl = new URL(request.url);
   const redirectUri = new URL("/api/auth/sso/mail/callback", requestUrl.origin);
   const destination = new URL(env.MAIL_SYSTEM_SSO_URL || "");
+  destination.searchParams.set("sso", "chemvault-user");
   destination.searchParams.set("client_id", "chemvault_user");
   destination.searchParams.set("redirect_uri", redirectUri.toString());
   destination.searchParams.set("return_to", sanitizeReturnTo(returnTo));

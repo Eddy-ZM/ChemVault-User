@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -53,10 +53,9 @@ export function Login() {
   return (
     <main className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <Link className="auth-brand-link" to="/">
-          <ArrowLeft className="h-4 w-4" />
+        <div className="auth-brand-lockup">
           <BrandLogo compact title="ChemVault User Center" subtitle="Secure sign-in" />
-        </Link>
+        </div>
         <div>
           <h1>Login</h1>
           <p>Use your ChemVault identity to enter the unified user dashboard.</p>

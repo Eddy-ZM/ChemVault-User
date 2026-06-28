@@ -2,6 +2,7 @@ import { createSession, sessionCookie } from "./auth";
 import { getUserByEmail, getUserById, insertDefaultServices, toPublicUser } from "./db";
 import { loadUserMailAccount, toPublicMailAccount, writeAuditLog } from "./permissions";
 import { ApiError, jsonResponse } from "./responses";
+import { sanitizeReturnTo } from "./returnTo";
 import { randomId } from "./security";
 import type { Env, ExternalIdentityRow, MailAccountRow, PublicMailAccount, SystemRole, UserRow } from "./types";
 import { normalizeEmail, validateEmail } from "./validators";
@@ -599,12 +600,6 @@ async function upsertDefaultMailAccount(db: D1Database, user: UserRow, displayNa
     )
     .bind(randomId("mail"), user.id, user.email, displayName, now, now)
     .run();
-}
-
-function sanitizeReturnTo(value?: string | null): string {
-  if (!value || typeof value !== "string") return "/dashboard";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
-  return value;
 }
 
 function toBase64(bytes: Uint8Array): string {

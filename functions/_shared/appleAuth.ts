@@ -2,6 +2,7 @@ import { completeSsoLogin } from "./externalAuth";
 import { getJwtSecret } from "./auth";
 import { getUserByEmail, getUserById, insertDefaultServices } from "./db";
 import { ApiError } from "./responses";
+import { sanitizeReturnTo } from "./returnTo";
 import { randomId } from "./security";
 import type { Env, UserRow } from "./types";
 import { normalizeEmail, validateEmail } from "./validators";
@@ -459,12 +460,6 @@ function parseAppleUserPayload(value?: string | null): { email: string; name: st
 
 function getAppleRedirectUri(env: Env, requestUrl: URL): string {
   return env.APPLE_REDIRECT_URI || new URL("/api/auth/sso/apple/callback", requestUrl.origin).toString();
-}
-
-function sanitizeReturnTo(value?: string | null): string {
-  if (!value || typeof value !== "string") return "/dashboard";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
-  return value;
 }
 
 function mailOnboardingReturnTo(returnTo: string): string {

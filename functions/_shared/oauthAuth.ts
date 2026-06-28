@@ -2,6 +2,7 @@ import { completeSsoLogin } from "./externalAuth";
 import { getJwtSecret } from "./auth";
 import { getUserByEmail, getUserById, insertDefaultServices } from "./db";
 import { ApiError } from "./responses";
+import { sanitizeReturnTo } from "./returnTo";
 import { randomId } from "./security";
 import type { Env, UserRow } from "./types";
 import { normalizeEmail, validateEmail } from "./validators";
@@ -616,12 +617,6 @@ function getOAuthRedirectUri(env: Env, request: Request, provider: OAuthProvider
 
 function getOAuthSecret(env: Env): string {
   return env.AUTH_SECRET || getJwtSecret(env);
-}
-
-function sanitizeReturnTo(value?: string | null): string {
-  if (!value || typeof value !== "string") return "/dashboard";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
-  return value;
 }
 
 function mailOnboardingReturnTo(returnTo: string, provider: OAuthProvider): string {
