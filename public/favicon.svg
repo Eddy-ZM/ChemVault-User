@@ -1,5 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="ChemVault">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="ChemVault User Center">
+  <defs>
+    <linearGradient id="cv-user-icon-mark" x1="19" y1="12" x2="79" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#285a86"/>
+      <stop offset="1" stop-color="#173a5a"/>
+    </linearGradient>
+    <linearGradient id="cv-user-icon-module" x1="70" y1="34" x2="84" y2="63" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4fc08a"/>
+      <stop offset="1" stop-color="#168f63"/>
+    </linearGradient>
+    <linearGradient id="cv-user-icon-glyph" x1="36" y1="38" x2="62" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4fc08a"/>
+      <stop offset="1" stop-color="#168f63"/>
+    </linearGradient>
+  </defs>
   <rect width="96" height="96" rx="20" fill="#ffffff"/>
-  <path d="M70 24 48 11 20 27v42l28 16 22-13V58L48 71 32 62V35l16-10 22 13V24Z" fill="#285a86"/>
-  <path d="M70 42 83 34v21l-13 8V42Z" fill="#285a86"/>
+  <rect x=".75" y=".75" width="94.5" height="94.5" rx="19.25" fill="none" stroke="rgba(15,35,55,.08)" stroke-width="1.5"/>
+  <path d="M70 24 48 11 20 27v42l28 16 22-13V58L48 71 32 62V35l16-10 22 13V24Z" fill="url(#cv-user-icon-mark)"/>
+  <path d="M70 42 83 34v21l-13 8V42Z" fill="url(#cv-user-icon-module)"/>
+  <g fill="none" stroke="url(#cv-user-icon-glyph)" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="48" cy="42.5" r="4.5"/>
+    <path d="M39 58c2-6.1 16-6.1 18 0"/>
+  </g>
 </svg>
