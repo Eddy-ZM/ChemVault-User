@@ -11,6 +11,7 @@ function statusMeta(status: string) {
 export function ServiceCard({ service }: { service: ConnectedService }) {
   const { notify } = useToast();
   const status = statusMeta(service.status);
+  const docsHref = docsHrefForService(service.service, service.name);
 
   return (
     <article className="card flex min-h-[176px] flex-col justify-between">
@@ -21,7 +22,13 @@ export function ServiceCard({ service }: { service: ConnectedService }) {
           </div>
           <span className={`status-pill ${status.className}`}>{status.label}</span>
         </div>
-        <h3 className="text-base font-semibold text-slate-950">{service.name}</h3>
+        <h3 className="text-base font-semibold text-slate-950">
+          {docsHref ? (
+            <a className="transition hover:text-blue-700" href={docsHref} target="_blank" rel="noopener noreferrer">
+              {service.name}
+            </a>
+          ) : service.name}
+        </h3>
         <p className="mt-2 text-sm leading-6 text-slate-600">{service.description}</p>
       </div>
       <button
@@ -44,4 +51,9 @@ export function ServiceCard({ service }: { service: ConnectedService }) {
       </button>
     </article>
   );
+}
+
+function docsHrefForService(serviceKey: string, serviceName: string) {
+  const text = `${serviceKey} ${serviceName}`.toLowerCase();
+  return text.includes("docs") || text.includes("chemvault_docs") ? "https://docs.chemvault.science/" : "";
 }

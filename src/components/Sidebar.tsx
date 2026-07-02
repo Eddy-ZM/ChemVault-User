@@ -1,4 +1,4 @@
-import { BarChart3, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Mail, Network, Shield, UserRound, UsersRound } from "lucide-react";
+import { BarChart3, BookOpen, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Mail, Network, Shield, UserRound, UsersRound } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "../lib/auth";
@@ -40,6 +40,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             {item.label}
           </NavLink>
         ))}
+        <a className="nav-item" href="https://docs.chemvault.science/manual/user-center/" target="_blank" rel="noopener noreferrer">
+          <BookOpen className="h-4 w-4" />
+          Docs
+        </a>
         {isAdmin ? (
           <>
           <NavLink end to="/admin" className={({ isActive }) => `nav-item ${isActive ? "nav-item-active" : ""}`}>
