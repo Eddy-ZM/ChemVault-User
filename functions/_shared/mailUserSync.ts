@@ -2,7 +2,7 @@ import { getUserByEmail, insertDefaultServices, toPublicUser } from "./db";
 import { toPublicMailAccount, writeAuditLog } from "./permissions";
 import { ApiError } from "./responses";
 import { hashPassword, randomId, timingSafeEqualString } from "./security";
-import type { Env, MailAccountRow, MailRole, MailStatus, PublicMailAccount, PublicUser, SystemRole, UserRow } from "./types";
+import type { Env, MailAccountRow, MailRole, MailStatus, PublicMailAccount, PublicUser, UserRow } from "./types";
 import { cleanOptionalText, normalizeEmail, validateEmail, validateMailRole, validateMailStatus } from "./validators";
 
 export interface MailUserSyncPayload {
@@ -75,19 +75,11 @@ export function parseMailUserSyncPayload(input: unknown): MailUserSyncPayload {
   };
 }
 
-export function systemRoleForMailRole(mailRole: MailRole): SystemRole {
-  if (mailRole === "mailbox_super") return "super_admin";
-  if (mailRole === "mailbox_admin") return "admin";
-  return "user";
-}
-
 export async function syncMailUser(env: Env, request: Request, payload: MailUserSyncPayload): Promise<MailUserSyncResult> {
   const now = new Date().toISOString();
   const existing = await getUserByEmail(env.DB, payload.primaryEmail);
-  const targetSystemRole = systemRoleForMailRole(payload.mailRole);
-  const user = existing ? await updateSyncedUser(env, existing, payload, targetSystemRole, now) : await createSyncedUser(env, payload, targetSystemRole, now);
+  const user = existing ? await updateSyncedUser(env, existing, payload, now) : await createSyncedUser(env, payload, now);
   const mailAccount = await upsertMailAccount(env, user.id, payload, now);
-  await upsertMailAccess(env, user.id, payload, now);
 
   await writeAuditLog({
     env,
@@ -104,6 +96,7 @@ export async function syncMailUser(env: Env, request: Request, payload: MailUser
       mailAddress: payload.mailAddress,
       mailRole: payload.mailRole,
       mailStatus: payload.mailStatus,
+      authorizationSource: "user_system",
       action: existing ? "updated" : "created",
     },
   });
@@ -115,7 +108,7 @@ export async function syncMailUser(env: Env, request: Request, payload: MailUser
   };
 }
 
-async function createSyncedUser(env: Env, payload: MailUserSyncPayload, systemRole: SystemRole, now: string): Promise<UserRow> {
+async function createSyncedUser(env: Env, payload: MailUserSyncPayload, now: string): Promise<UserRow> {
   const user: UserRow = {
     id: randomId("user"),
     email: payload.primaryEmail,
@@ -126,11 +119,11 @@ async function createSyncedUser(env: Env, payload: MailUserSyncPayload, systemRo
     field_of_interest: null,
     bio: null,
     website: null,
-    role: systemRole === "user" ? "free" : "admin",
-    system_role: systemRole,
+    role: "free",
+    system_role: "user",
     source: "mail_system",
-    global_status: userStatusForMailStatus(payload.mailStatus),
-    status: userStatusForMailStatus(payload.mailStatus),
+    global_status: "active",
+    status: "active",
     created_at: now,
     updated_at: now,
     last_login_at: null,
@@ -152,44 +145,23 @@ async function updateSyncedUser(
   env: Env,
   existing: UserRow,
   payload: MailUserSyncPayload,
-  targetSystemRole: SystemRole,
   now: string,
 ): Promise<UserRow> {
-  const nextSystemRole = nextSyncedSystemRole(existing, targetSystemRole);
-  const nextRole = nextSystemRole === "user" ? existing.role : "admin";
-  const nextStatus = userStatusForMailStatus(payload.mailStatus);
-
   await env.DB.prepare(
     `UPDATE users
      SET name = CASE
         WHEN source = 'mail_system' OR name = '' OR name = email THEN ?
         ELSE name
       END,
-      role = ?,
-      system_role = ?,
-      source = CASE
-        WHEN source = 'local' AND ? != 'user' THEN 'mail_system'
-        ELSE source
-      END,
-      global_status = ?,
-      status = ?,
       updated_at = ?
      WHERE id = ?`,
   )
-    .bind(payload.name, nextRole, nextSystemRole, targetSystemRole, nextStatus, nextStatus, now, existing.id)
+    .bind(payload.name, now, existing.id)
     .run();
 
   const updated = await env.DB.prepare(`SELECT * FROM users WHERE id = ? LIMIT 1`).bind(existing.id).first<UserRow>();
   if (!updated) throw new ApiError("INTERNAL_ERROR", "Synced user could not be loaded.", 500);
   return updated;
-}
-
-function nextSyncedSystemRole(existing: UserRow, incoming: SystemRole): SystemRole {
-  if (existing.system_role === "owner") return "owner";
-  if (incoming === "super_admin") return "super_admin";
-  if (incoming === "admin" && existing.system_role !== "super_admin") return "admin";
-  if (existing.system_role === "super_admin" || existing.system_role === "admin") return existing.system_role;
-  return incoming;
 }
 
 async function upsertMailAccount(env: Env, userId: string, payload: MailUserSyncPayload, now: string): Promise<MailAccountRow> {
@@ -210,11 +182,11 @@ async function upsertMailAccount(env: Env, userId: string, payload: MailUserSync
     )
       .bind(
         payload.displayName,
-        payload.mailRole,
+        "mailbox_user",
         payload.mailStatus,
-        payload.canSend ? 1 : 0,
-        payload.canReceive ? 1 : 0,
-        payload.canLoginMail ? 1 : 0,
+        1,
+        1,
+        1,
         payload.mailboxQuotaMb,
         JSON.stringify(payload.aliases),
         now,
@@ -238,11 +210,11 @@ async function upsertMailAccount(env: Env, userId: string, payload: MailUserSync
       userId,
       payload.mailAddress,
       payload.displayName,
-      payload.mailRole,
+      "mailbox_user",
       payload.mailStatus,
-      payload.canSend ? 1 : 0,
-      payload.canReceive ? 1 : 0,
-      payload.canLoginMail ? 1 : 0,
+      1,
+      1,
+      1,
       payload.mailboxQuotaMb,
       JSON.stringify(payload.aliases),
       now,
@@ -253,43 +225,6 @@ async function upsertMailAccount(env: Env, userId: string, payload: MailUserSync
   const row = await env.DB.prepare(`SELECT * FROM mail_accounts WHERE id = ? LIMIT 1`).bind(id).first<MailAccountRow>();
   if (!row) throw new ApiError("INTERNAL_ERROR", "Synced mail account could not be loaded.", 500);
   return row;
-}
-
-async function upsertMailAccess(env: Env, userId: string, payload: MailUserSyncPayload, now: string): Promise<void> {
-  const accessStatus = payload.mailStatus === "active" ? "active" : "disabled";
-  const existingService = await env.DB.prepare(`SELECT id FROM service_access WHERE user_id = ? AND service_key = ? LIMIT 1`)
-    .bind(userId, "chemvault_mail")
-    .first<{ id: string }>();
-  if (existingService) {
-    await env.DB.prepare(`UPDATE service_access SET status = ?, updated_at = ? WHERE id = ?`)
-      .bind(accessStatus, now, existingService.id)
-      .run();
-  } else {
-    await env.DB.prepare(
-      `INSERT INTO service_access (id, user_id, service_key, status, granted_by, created_at, updated_at)
-       VALUES (?, ?, 'chemvault_mail', ?, NULL, ?, ?)`,
-    )
-      .bind(randomId("svcaccess"), userId, accessStatus, now, now)
-      .run();
-  }
-
-  await setPermission(env, userId, "mail:access", payload.mailStatus === "active", now);
-  await setPermission(env, userId, "mail:send", payload.canSend && payload.mailStatus === "active", now);
-  await setPermission(env, userId, "mail:receive", payload.canReceive && payload.mailStatus === "active", now);
-}
-
-async function setPermission(env: Env, userId: string, key: string, allowed: boolean, now: string): Promise<void> {
-  if (!allowed) {
-    await env.DB.prepare(`DELETE FROM user_permissions WHERE user_id = ? AND permission_key = ?`).bind(userId, key).run();
-    return;
-  }
-
-  await env.DB.prepare(
-    `INSERT OR REPLACE INTO user_permissions (id, user_id, permission_key, effect, granted_by, created_at)
-     VALUES (COALESCE((SELECT id FROM user_permissions WHERE user_id = ? AND permission_key = ?), ?), ?, ?, 'allow', NULL, ?)`,
-  )
-    .bind(userId, key, randomId("uperm"), userId, key, now)
-    .run();
 }
 
 function booleanValue(value: unknown, fallback: boolean): boolean {
@@ -306,10 +241,4 @@ function parseAliases(value: unknown): string[] {
     .map((item) => normalizeEmail(item))
     .filter((item) => validateEmail(item))
     .slice(0, 20);
-}
-
-function userStatusForMailStatus(status: MailStatus): "active" | "disabled" | "deleted" {
-  if (status === "active") return "active";
-  if (status === "deleted") return "deleted";
-  return "disabled";
 }

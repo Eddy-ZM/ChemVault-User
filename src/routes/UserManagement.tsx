@@ -2,7 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { KeyRound, Mail, RotateCcw, Search, SlidersHorizontal, Trash2, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
-import type { MailAccount, MailRole, SystemRole, User, UserRole, UserStatus } from "../lib/types";
+import type { MailAccount, SystemRole, User, UserRole, UserStatus } from "../lib/types";
 import { ButtonSpinner, EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
 import { ConfirmDialog, Modal } from "../components/Modal";
 import { useToast } from "../components/Toast";
@@ -10,7 +10,6 @@ import { useToast } from "../components/Toast";
 const roles: UserRole[] = ["free", "pro", "admin"];
 const systemRoles: SystemRole[] = ["user", "staff", "service_admin", "admin", "super_admin", "owner"];
 const statuses: UserStatus[] = ["active", "disabled", "deleted"];
-const mailRoles: MailRole[] = ["mailbox_user", "mailbox_admin", "mailbox_super"];
 
 const initialCreateForm = {
   name: "",
@@ -24,12 +23,8 @@ const initialCreateForm = {
   assignMailbox: true,
   mailAddress: "",
   mailDisplayName: "",
-  mailRole: "mailbox_user" as MailRole,
   mailboxQuotaMb: 1024,
   aliases: "",
-  canSend: true,
-  canReceive: true,
-  canLoginMail: true,
 };
 
 export function UserManagement() {
@@ -51,12 +46,8 @@ export function UserManagement() {
   const [mailForm, setMailForm] = useState({
     mailAddress: "",
     displayName: "",
-    mailRole: "mailbox_user" as MailRole,
     mailboxQuotaMb: 1024,
     aliases: "",
-    canSend: true,
-    canReceive: true,
-    canLoginMail: true,
   });
 
   async function load(next = { q: query, role: roleFilter, systemRole: systemRoleFilter, status: statusFilter }) {
@@ -120,12 +111,8 @@ export function UserManagement() {
     setMailForm({
       mailAddress: `${localPart}@chemvault.science`,
       displayName: user.name,
-      mailRole: "mailbox_user",
       mailboxQuotaMb: 1024,
       aliases: "",
-      canSend: true,
-      canReceive: true,
-      canLoginMail: true,
     });
   }
 
@@ -175,10 +162,6 @@ export function UserManagement() {
             ? {
                 mailAddress: createForm.mailAddress,
                 displayName: createForm.mailDisplayName || createForm.name,
-                mailRole: createForm.mailRole,
-                canSend: createForm.canSend,
-                canReceive: createForm.canReceive,
-                canLoginMail: createForm.canLoginMail,
                 mailboxQuotaMb: createForm.mailboxQuotaMb,
                 aliases: createForm.aliases.split(",").map((item) => item.trim()).filter(Boolean),
               }
@@ -456,12 +439,6 @@ export function UserManagement() {
                     <input value={createForm.mailDisplayName} onChange={(event) => updateCreateForm({ mailDisplayName: event.target.value })} />
                   </label>
                   <label>
-                    Mail role
-                    <select value={createForm.mailRole} onChange={(event) => updateCreateForm({ mailRole: event.target.value as MailRole })}>
-                      {mailRoles.map((role) => <option key={role} value={role}>{role}</option>)}
-                    </select>
-                  </label>
-                  <label>
                     Quota MB
                     <input type="number" min={0} value={createForm.mailboxQuotaMb} onChange={(event) => updateCreateForm({ mailboxQuotaMb: Number(event.target.value) })} />
                   </label>
@@ -470,11 +447,9 @@ export function UserManagement() {
                   Aliases
                   <input value={createForm.aliases} onChange={(event) => updateCreateForm({ aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
                 </label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="checkbox-row"><input type="checkbox" checked={createForm.canSend} onChange={(event) => updateCreateForm({ canSend: event.target.checked })} /> Can send</label>
-                  <label className="checkbox-row"><input type="checkbox" checked={createForm.canReceive} onChange={(event) => updateCreateForm({ canReceive: event.target.checked })} /> Can receive</label>
-                  <label className="checkbox-row"><input type="checkbox" checked={createForm.canLoginMail} onChange={(event) => updateCreateForm({ canLoginMail: event.target.checked })} /> Can login mail</label>
-                </div>
+                <p className="text-sm text-slate-500">
+                  Mail access, send, and receive permissions are managed from the user's Services and Permissions pages.
+                </p>
               </div>
             ) : null}
           </div>
@@ -506,12 +481,6 @@ export function UserManagement() {
               <input value={mailForm.displayName} onChange={(event) => setMailForm({ ...mailForm, displayName: event.target.value })} />
             </label>
             <label>
-              Mail role
-              <select value={mailForm.mailRole} onChange={(event) => setMailForm({ ...mailForm, mailRole: event.target.value as MailRole })}>
-                {mailRoles.map((role) => <option key={role} value={role}>{role}</option>)}
-              </select>
-            </label>
-            <label>
               Quota MB
               <input type="number" min={0} value={mailForm.mailboxQuotaMb} onChange={(event) => setMailForm({ ...mailForm, mailboxQuotaMb: Number(event.target.value) })} />
             </label>
@@ -520,11 +489,9 @@ export function UserManagement() {
             Aliases
             <input value={mailForm.aliases} onChange={(event) => setMailForm({ ...mailForm, aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
           </label>
-          <div className="flex flex-wrap gap-4">
-            <label className="checkbox-row"><input type="checkbox" checked={mailForm.canSend} onChange={(event) => setMailForm({ ...mailForm, canSend: event.target.checked })} /> Can send</label>
-            <label className="checkbox-row"><input type="checkbox" checked={mailForm.canReceive} onChange={(event) => setMailForm({ ...mailForm, canReceive: event.target.checked })} /> Can receive</label>
-            <label className="checkbox-row"><input type="checkbox" checked={mailForm.canLoginMail} onChange={(event) => setMailForm({ ...mailForm, canLoginMail: event.target.checked })} /> Can login mail</label>
-          </div>
+          <p className="text-sm text-slate-500">
+            Mail access, send, and receive permissions are managed from the user's Services and Permissions pages.
+          </p>
         </form>
       </Modal>
       <ConfirmDialog

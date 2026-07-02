@@ -2,23 +2,16 @@ import { getUserById } from "../../../_shared/db";
 import { assertActorCanManageTarget, requireAdmin, toPublicMailAccount, writeAuditLog } from "../../../_shared/permissions";
 import { ApiError, handleApi, jsonResponse, readJson } from "../../../_shared/responses";
 import { randomId } from "../../../_shared/security";
-import type { Env, MailAccountRow, MailRole } from "../../../_shared/types";
-import { normalizeEmail, validateEmail, validateMailRole } from "../../../_shared/validators";
+import type { Env, MailAccountRow, MailStatus } from "../../../_shared/types";
+import { normalizeEmail, validateEmail, validateMailStatus } from "../../../_shared/validators";
 
 interface CreateMailPayload {
   userId: string;
   mailAddress: string;
   displayName: string | null;
-  mailRole: MailRole;
-  canSend: boolean;
-  canReceive: boolean;
-  canLoginMail: boolean;
+  mailStatus: MailStatus;
   mailboxQuotaMb: number;
   aliases: string[];
-}
-
-function boolValue(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
 }
 
 function parseAliases(value: unknown): string[] {
@@ -47,10 +40,7 @@ function parseCreatePayload(input: unknown): CreateMailPayload {
     userId,
     mailAddress,
     displayName,
-    mailRole: validateMailRole(payload.mailRole || "mailbox_user"),
-    canSend: boolValue(payload.canSend, true),
-    canReceive: boolValue(payload.canReceive, true),
-    canLoginMail: boolValue(payload.canLoginMail, true),
+    mailStatus: validateMailStatus(payload.mailStatus || "active"),
     mailboxQuotaMb,
     aliases: parseAliases(payload.aliases),
   };
@@ -102,17 +92,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
         `INSERT INTO mail_accounts (
           id, user_id, mail_address, mail_display_name, mail_role, mail_status,
           can_send, can_receive, can_login_mail, mailbox_quota_mb, aliases, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           id,
           target.id,
           payload.mailAddress,
           payload.displayName,
-          payload.mailRole,
-          payload.canSend ? 1 : 0,
-          payload.canReceive ? 1 : 0,
-          payload.canLoginMail ? 1 : 0,
+          "mailbox_user",
+          payload.mailStatus,
+          1,
+          1,
+          1,
           payload.mailboxQuotaMb,
           JSON.stringify(payload.aliases),
           now,
@@ -131,7 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
       action: "mail_account.create",
       resourceType: "mail_account",
       resourceId: id,
-      details: { mailAddress: payload.mailAddress, mailRole: payload.mailRole },
+      details: { mailAddress: payload.mailAddress, authorizationSource: "user_system" },
     });
 
     const row = await env.DB.prepare(`SELECT * FROM mail_accounts WHERE id = ?`).bind(id).first<MailAccountRow>();

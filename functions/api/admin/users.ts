@@ -167,7 +167,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
         action: "mail_account.create",
         resourceType: "mail_account",
         resourceId: mailRow.id,
-        details: { mailAddress: mailRow.mail_address, mailRole: mailRow.mail_role, createdWithUser: true },
+        details: { mailAddress: mailRow.mail_address, createdWithUser: true, authorizationSource: "user_system" },
       });
     }
 
@@ -201,11 +201,11 @@ function buildMailRow(userId: string, payload: AdminCreateMailboxPayload, now: s
     user_id: userId,
     mail_address: payload.mailAddress,
     mail_display_name: payload.displayName,
-    mail_role: payload.mailRole,
+    mail_role: "mailbox_user",
     mail_status: "active",
-    can_send: payload.canSend ? 1 : 0,
-    can_receive: payload.canReceive ? 1 : 0,
-    can_login_mail: payload.canLoginMail ? 1 : 0,
+    can_send: 1,
+    can_receive: 1,
+    can_login_mail: 1,
     mailbox_quota_mb: payload.mailboxQuotaMb,
     aliases: JSON.stringify(payload.aliases),
     created_at: now,

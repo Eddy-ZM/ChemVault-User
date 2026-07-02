@@ -3,7 +3,7 @@ import { bindVerifiedMailAccount, type MailPasswordAuthResult } from "../functio
 import type { Env, ExternalIdentityRow, MailAccountRow, UserRow } from "../functions/_shared/types";
 
 describe("mail account binding", () => {
-  it("binds a verified ChemVault Mail account and grants mail access", async () => {
+  it("binds a verified ChemVault Mail account without granting mail-system authority", async () => {
     const db = new BindingMockD1();
     const user = db.insertUser("researcher@example.edu", "Researcher", { source: "google" });
     const account = await bindVerifiedMailAccount({
@@ -18,11 +18,11 @@ describe("mail account binding", () => {
     expect(account).toMatchObject({
       userId: user.id,
       mailAddress: "researcher@chemvault.science",
-      mailRole: "mailbox_admin",
+      mailRole: "mailbox_user",
     });
-    expect(db.users.get(user.id)?.system_role).toBe("admin");
-    expect(db.serviceAccess.get(`${user.id}:chemvault_mail`)?.status).toBe("active");
-    expect(db.permissions.get(`${user.id}:mail:access`)).toBe("allow");
+    expect(db.users.get(user.id)?.system_role).toBe("user");
+    expect(db.serviceAccess.get(`${user.id}:chemvault_mail`)).toBeUndefined();
+    expect(db.permissions.get(`${user.id}:mail:access`)).toBeUndefined();
     expect(db.identitiesByEmail.get("chemvault_mail:researcher@chemvault.science")?.user_id).toBe(user.id);
     expect(db.auditLogs.at(-1)?.action).toBe("mail_account.bind");
   });

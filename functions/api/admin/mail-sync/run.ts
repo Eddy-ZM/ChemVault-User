@@ -13,7 +13,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
       action: "mail_admin_sync.run_requested",
       resourceType: "mail_admin_sync",
       details: {
-        todo: "Configure MAIL_SYSTEM_SYNC_SECRET and mail.chemvault.science admin API before enabling automatic sync.",
+        todo: "Configure Mail admin record import only after the mail.chemvault.science admin API is available.",
         hasSyncSecret: Boolean(env.MAIL_SYSTEM_SYNC_SECRET),
       },
     });
@@ -21,7 +21,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
     return jsonResponse(request, {
       status: "todo",
       message:
-        "Automatic mail admin sync is reserved for the future mail.chemvault.science admin API. Use /api/admin/mail-sync/manual for now.",
+        "Automatic mail admin record import is reserved for the future mail.chemvault.science admin API. User Center remains the authority for roles and permissions.",
       requiredEnv: ["MAIL_SYSTEM_SYNC_SECRET"],
     });
   });

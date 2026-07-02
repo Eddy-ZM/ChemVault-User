@@ -30,7 +30,7 @@ export function MailSync() {
       });
       setResult(body);
       setError("");
-      notify({ title: "Mail admins synchronized", description: `${body.created} created, ${body.updated} updated, ${body.skipped} skipped.`, tone: "success" });
+      notify({ title: "Mail admin records imported", description: `${body.created} created, ${body.updated} updated, ${body.skipped} skipped.`, tone: "success" });
     } catch (err) {
       const message = err instanceof ApiClientError ? err.message : err instanceof Error ? err.message : "Manual sync failed.";
       setError(message);
@@ -79,8 +79,8 @@ export function MailSync() {
       </div>
       {error ? <div className="alert-error">{error}</div> : null}
       <div className="alert-info">
-        Mail system super/admin users automatically receive main-system highest permissions. Mail super maps to
-        super_admin, mail admin maps to admin, and mail-system super users cannot be downgraded by ordinary admins.
+        Mail system super/admin lists are imported only as reference records. User Center roles, service access,
+        and permissions remain the only source of authorization.
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">

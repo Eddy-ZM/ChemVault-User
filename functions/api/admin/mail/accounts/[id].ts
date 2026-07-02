@@ -2,16 +2,12 @@ import { getUserById } from "../../../../_shared/db";
 import { assertActorCanManageTarget, requireAdmin, toPublicMailAccount, writeAuditLog } from "../../../../_shared/permissions";
 import { ApiError, handleApi, jsonResponse, readJson } from "../../../../_shared/responses";
 import type { Env, MailAccountRow } from "../../../../_shared/types";
-import { normalizeEmail, validateEmail, validateMailRole, validateMailStatus } from "../../../../_shared/validators";
+import { normalizeEmail, validateEmail, validateMailStatus } from "../../../../_shared/validators";
 
 async function loadMailAccount(db: D1Database, id: string): Promise<MailAccountRow> {
   const row = await db.prepare(`SELECT * FROM mail_accounts WHERE id = ? LIMIT 1`).bind(id).first<MailAccountRow>();
   if (!row || row.mail_status === "deleted") throw new ApiError("VALIDATION_ERROR", "Mail account not found.", 404);
   return row;
-}
-
-function boolNumber(value: unknown): number | null {
-  return typeof value === "boolean" ? (value ? 1 : 0) : null;
 }
 
 function parseAliases(value: unknown): string[] | null {
@@ -55,26 +51,19 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
       values.push(displayName);
     }
 
-    if (Object.hasOwn(payload, "mailRole")) {
-      updates.push("mail_role = ?");
-      values.push(validateMailRole(payload.mailRole));
-    }
-
     if (Object.hasOwn(payload, "mailStatus")) {
       updates.push("mail_status = ?");
       values.push(validateMailStatus(payload.mailStatus));
     }
 
-    for (const [field, column] of [
-      ["canSend", "can_send"],
-      ["canReceive", "can_receive"],
-      ["canLoginMail", "can_login_mail"],
-    ] as const) {
+    const deprecatedMailControlFields = ["mailRole", "canSend", "canReceive", "canLoginMail"];
+    for (const field of deprecatedMailControlFields) {
       if (Object.hasOwn(payload, field)) {
-        const value = boolNumber(payload[field]);
-        if (value === null) throw new ApiError("VALIDATION_ERROR", `${field} must be boolean.`, 400);
-        updates.push(`${column} = ?`);
-        values.push(value);
+        throw new ApiError(
+          "VALIDATION_ERROR",
+          "Mailbox authority is controlled through User Center roles, service access, and permissions.",
+          400,
+        );
       }
     }
 

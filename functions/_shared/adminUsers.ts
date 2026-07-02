@@ -1,10 +1,9 @@
 import { ApiError } from "./responses";
-import type { MailRole, SystemRole, UserRole, UserRow, UserStatus } from "./types";
+import type { SystemRole, UserRole, UserRow, UserStatus } from "./types";
 import {
   cleanOptionalText,
   normalizeEmail,
   validateEmail,
-  validateMailRole,
   validatePasswordStrength,
   validateRole,
   validateStatus,
@@ -14,10 +13,6 @@ import {
 export interface AdminCreateMailboxPayload {
   mailAddress: string;
   displayName: string | null;
-  mailRole: MailRole;
-  canSend: boolean;
-  canReceive: boolean;
-  canLoginMail: boolean;
   mailboxQuotaMb: number;
   aliases: string[];
 }
@@ -96,17 +91,9 @@ function parseCreateMailboxPayload(input: unknown, fallbackDisplayName: string):
   return {
     mailAddress,
     displayName,
-    mailRole: validateMailRole(payload.mailRole || "mailbox_user"),
-    canSend: boolValue(payload.canSend, true),
-    canReceive: boolValue(payload.canReceive, true),
-    canLoginMail: boolValue(payload.canLoginMail, true),
     mailboxQuotaMb,
     aliases: parseAliases(payload.aliases),
   };
-}
-
-function boolValue(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
 }
 
 function parseAliases(value: unknown): string[] {

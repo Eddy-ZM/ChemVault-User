@@ -2,16 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   parseMailUserSyncPayload,
   requireMailSyncSecret,
-  systemRoleForMailRole,
 } from "../functions/_shared/mailUserSync";
 import type { Env } from "../functions/_shared/types";
 
 describe("mail user sync", () => {
-  it("normalizes ordinary mail users without granting admin roles", () => {
+  it("normalizes mail metadata without granting user-system authority", () => {
     const payload = parseMailUserSyncPayload({
       email: " New.User@ChemVault.Science ",
       mailAddress: " New.User@ChemVault.Science ",
       displayName: "New User",
+      mailRole: "mailbox_super",
+      canSend: false,
       aliases: [" n.user@chemvault.science ", "not-an-email"],
     });
 
@@ -19,19 +20,13 @@ describe("mail user sync", () => {
       primaryEmail: "new.user@chemvault.science",
       mailAddress: "new.user@chemvault.science",
       displayName: "New User",
-      mailRole: "mailbox_user",
+      mailRole: "mailbox_super",
       mailStatus: "active",
-      canSend: true,
+      canSend: false,
       canReceive: true,
       canLoginMail: true,
       aliases: ["n.user@chemvault.science"],
     });
-    expect(systemRoleForMailRole(payload.mailRole)).toBe("user");
-  });
-
-  it("maps mail admin roles to main system authority", () => {
-    expect(systemRoleForMailRole("mailbox_admin")).toBe("admin");
-    expect(systemRoleForMailRole("mailbox_super")).toBe("super_admin");
   });
 
   it("requires the configured mail sync secret", async () => {

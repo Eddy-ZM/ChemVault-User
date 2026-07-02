@@ -1,24 +1,20 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Edit3, Mail, Plus, Search, Trash2 } from "lucide-react";
+import { Edit3, Plus, Search, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
-import type { MailAccount, MailRole, MailStatus, User } from "../lib/types";
+import type { MailAccount, MailStatus, User } from "../lib/types";
 import { ConfirmDialog, Modal } from "../components/Modal";
 import { ButtonSpinner, EmptyState, LoadingBlock, StatusBadge } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
-const mailRoles: MailRole[] = ["mailbox_user", "mailbox_admin", "mailbox_super"];
 const mailStatuses: MailStatus[] = ["active", "disabled", "suspended", "deleted"];
 const emptyForm = {
   userId: "",
   mailAddress: "",
   displayName: "",
-  mailRole: "mailbox_user" as MailRole,
   mailStatus: "active" as MailStatus,
   mailboxQuotaMb: 1024,
   aliases: "",
-  canSend: true,
-  canReceive: true,
-  canLoginMail: true,
 };
 
 export function MailAccountManager() {
@@ -73,13 +69,9 @@ export function MailAccountManager() {
       userId: account.userId,
       mailAddress: account.mailAddress,
       displayName: account.displayName || "",
-      mailRole: account.mailRole,
       mailStatus: account.mailStatus,
       mailboxQuotaMb: account.mailboxQuotaMb,
       aliases: account.aliases.join(", "),
-      canSend: account.canSend,
-      canReceive: account.canReceive,
-      canLoginMail: account.canLoginMail,
     });
     setModalOpen(true);
   }
@@ -186,10 +178,9 @@ export function MailAccountManager() {
               <tr>
                 <th>Mailbox</th>
                 <th>Main account</th>
-                <th>Role</th>
                 <th>Status</th>
                 <th>Quota</th>
-                <th>Flags</th>
+                <th>Access control</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -202,11 +193,6 @@ export function MailAccountManager() {
                   </td>
                   <td>{account.user?.email || account.userId}</td>
                   <td>
-                    <select value={account.mailRole} disabled={savingId === account.id} onChange={(event) => void patchAccount(account, { mailRole: event.target.value as MailRole })}>
-                      {mailRoles.map((role) => <option key={role} value={role}>{role}</option>)}
-                    </select>
-                  </td>
-                  <td>
                     <select value={account.mailStatus} disabled={savingId === account.id} onChange={(event) => void patchAccount(account, { mailStatus: event.target.value as MailStatus })}>
                       {mailStatuses.filter((item) => item !== "deleted").map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
@@ -216,10 +202,9 @@ export function MailAccountManager() {
                     <input type="number" min={0} value={account.mailboxQuotaMb} disabled={savingId === account.id} onBlur={(event) => void patchAccount(account, { mailboxQuotaMb: Number(event.target.value) })} onChange={(event) => setAccounts((current) => current.map((item) => item.id === account.id ? { ...item, mailboxQuotaMb: Number(event.target.value) } : item))} />
                   </td>
                   <td>
-                    <div className="grid gap-1 text-xs">
-                      <label className="checkbox-row"><input type="checkbox" disabled={savingId === account.id} checked={account.canSend} onChange={(event) => void patchAccount(account, { canSend: event.target.checked })} /> Send</label>
-                      <label className="checkbox-row"><input type="checkbox" disabled={savingId === account.id} checked={account.canReceive} onChange={(event) => void patchAccount(account, { canReceive: event.target.checked })} /> Receive</label>
-                      <label className="checkbox-row"><input type="checkbox" disabled={savingId === account.id} checked={account.canLoginMail} onChange={(event) => void patchAccount(account, { canLoginMail: event.target.checked })} /> Login</label>
+                    <div className="flex flex-wrap gap-2">
+                      <Link className="badge-muted" to={`/admin/users/${account.userId}/services`}>Services</Link>
+                      <Link className="badge-muted" to={`/admin/users/${account.userId}/permissions`}>Permissions</Link>
                     </div>
                   </td>
                   <td>
@@ -275,12 +260,6 @@ export function MailAccountManager() {
               <input value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} />
             </label>
             <label>
-              Mail role
-              <select value={form.mailRole} onChange={(event) => setForm({ ...form, mailRole: event.target.value as MailRole })}>
-                {mailRoles.map((role) => <option key={role} value={role}>{role}</option>)}
-              </select>
-            </label>
-            <label>
               Mail status
               <select value={form.mailStatus} onChange={(event) => setForm({ ...form, mailStatus: event.target.value as MailStatus })}>
                 {mailStatuses.filter((item) => item !== "deleted").map((item) => <option key={item} value={item}>{item}</option>)}
@@ -295,11 +274,9 @@ export function MailAccountManager() {
               <input value={form.aliases} onChange={(event) => setForm({ ...form, aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
             </label>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <label className="checkbox-row"><input type="checkbox" checked={form.canSend} onChange={(event) => setForm({ ...form, canSend: event.target.checked })} /> Can send</label>
-            <label className="checkbox-row"><input type="checkbox" checked={form.canReceive} onChange={(event) => setForm({ ...form, canReceive: event.target.checked })} /> Can receive</label>
-            <label className="checkbox-row"><input type="checkbox" checked={form.canLoginMail} onChange={(event) => setForm({ ...form, canLoginMail: event.target.checked })} /> Can login mail</label>
-          </div>
+          <p className="text-sm text-slate-500">
+            Mail access, send, and receive permissions are controlled on the bound user's Services and Permissions pages.
+          </p>
         </form>
       </Modal>
 

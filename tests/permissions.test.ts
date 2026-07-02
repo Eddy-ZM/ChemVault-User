@@ -5,7 +5,6 @@ import {
   canAccessService,
   evaluateAccessCheck,
   evaluatePermission,
-  mailSyncRoleToSystemRole,
   makeAuditDetails,
 } from "../functions/_shared/permissions";
 import type { AccessSnapshot, UserRow } from "../functions/_shared/types";
@@ -168,9 +167,15 @@ describe("permission evaluation", () => {
     ).toThrow("Only owner accounts can grant owner access");
   });
 
-  it("maps mail system roles into main system roles", () => {
-    expect(mailSyncRoleToSystemRole("super")).toBe("super_admin");
-    expect(mailSyncRoleToSystemRole("admin")).toBe("admin");
+  it("does not give mail-system source special downgrade protection", () => {
+    expect(() =>
+      assertActorCanManageTarget({
+        actor: { ...baseUser, id: "super_1", role: "admin", system_role: "super_admin" },
+        target: { ...baseUser, id: "mail_super_1", role: "admin", system_role: "super_admin", source: "mail_system" },
+        action: "update_role",
+        nextSystemRole: "admin",
+      }),
+    ).not.toThrow();
   });
 
   it("builds audit details without leaking secrets", () => {

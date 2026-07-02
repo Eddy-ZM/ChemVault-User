@@ -258,13 +258,6 @@ export function assertActorCanManageTarget(input: {
     throw new ApiError("FORBIDDEN", "Owner accounts cannot be deleted.", 403);
   }
 
-  if (target.source === "mail_system" && target.system_role === "super_admin" && nextSystemRole && nextSystemRole !== "super_admin" && !actorIsOwner) {
-    throw new ApiError("FORBIDDEN", "Mail system super users cannot be downgraded by this actor.", 403);
-  }
-}
-
-export function mailSyncRoleToSystemRole(mailRole: "super" | "admin"): SystemRole {
-  return mailRole === "super" ? "super_admin" : "admin";
 }
 
 export function makeAuditDetails(details: Record<string, unknown>): string {
