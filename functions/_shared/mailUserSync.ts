@@ -96,7 +96,7 @@ export async function syncMailUser(env: Env, request: Request, payload: MailUser
       mailAddress: payload.mailAddress,
       mailRole: payload.mailRole,
       mailStatus: payload.mailStatus,
-      authorizationSource: "user_system",
+      mailRuntimeAuthority: "mail_role",
       action: existing ? "updated" : "created",
     },
   });
@@ -182,7 +182,7 @@ async function upsertMailAccount(env: Env, userId: string, payload: MailUserSync
     )
       .bind(
         payload.displayName,
-        "mailbox_user",
+        payload.mailRole,
         payload.mailStatus,
         1,
         1,
@@ -210,7 +210,7 @@ async function upsertMailAccount(env: Env, userId: string, payload: MailUserSync
       userId,
       payload.mailAddress,
       payload.displayName,
-      "mailbox_user",
+      payload.mailRole,
       payload.mailStatus,
       1,
       1,

@@ -110,10 +110,11 @@ export function UserDetail() {
           {detail.mailAccount ? (
             <dl className="detail-list">
               <dt>Address</dt><dd>{detail.mailAccount.mailAddress}</dd>
+              <dt>Mail role</dt><dd><StatusBadge value={detail.mailAccount.mailRole} /></dd>
               <dt>Status</dt><dd><StatusBadge value={detail.mailAccount.mailStatus} /></dd>
               <dt>Quota</dt><dd>{detail.mailAccount.mailboxQuotaMb} MB</dd>
               <dt>Aliases</dt><dd>{detail.mailAccount.aliases.join(", ") || "-"}</dd>
-              <dt>Access</dt><dd>User Center permissions</dd>
+              <dt>Mail control</dt><dd>Follows Mail role assignment</dd>
             </dl>
           ) : (
             <p className="text-sm text-slate-500">No ChemVault mailbox assigned.</p>

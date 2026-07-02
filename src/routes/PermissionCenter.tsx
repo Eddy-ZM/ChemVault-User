@@ -126,7 +126,7 @@ export function PermissionCenter() {
           <label className="relative">
             <Search className="pointer-events-none absolute left-3 top-[38px] h-4 w-4 text-slate-400" />
             Search permissions
-            <input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search pages, files, mail, admin actions..." />
+            <input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search pages, files, docs, admin actions..." />
           </label>
           <p className="inline-help">{permissions.length} permissions across {Math.max(0, categories.length - 1)} categories.</p>
         </div>

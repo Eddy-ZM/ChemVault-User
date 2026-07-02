@@ -61,7 +61,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
       if (Object.hasOwn(payload, field)) {
         throw new ApiError(
           "VALIDATION_ERROR",
-          "Mailbox authority is controlled through User Center roles, service access, and permissions.",
+          "Mailbox runtime authority follows the role assigned in ChemVault Mail.",
           400,
         );
       }

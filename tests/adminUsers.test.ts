@@ -36,7 +36,6 @@ describe("admin user creation payloads", () => {
       mailAccount: {
         mailAddress: " New.User@ChemVault.Science ",
         displayName: "New User",
-        mailRole: "mailbox_user",
         mailboxQuotaMb: 2048,
         aliases: [" n.user@chemvault.science ", "not-an-email"],
       },

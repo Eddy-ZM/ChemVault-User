@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Edit3, Plus, Search, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import type { MailAccount, MailStatus, User } from "../lib/types";
 import { ConfirmDialog, Modal } from "../components/Modal";
@@ -178,9 +177,10 @@ export function MailAccountManager() {
               <tr>
                 <th>Mailbox</th>
                 <th>Main account</th>
+                <th>Mail role</th>
                 <th>Status</th>
                 <th>Quota</th>
-                <th>Access control</th>
+                <th>Mail control</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -192,6 +192,7 @@ export function MailAccountManager() {
                     <span>{account.aliases.join(", ") || "no aliases"}</span>
                   </td>
                   <td>{account.user?.email || account.userId}</td>
+                  <td><StatusBadge value={account.mailRole} /></td>
                   <td>
                     <select value={account.mailStatus} disabled={savingId === account.id} onChange={(event) => void patchAccount(account, { mailStatus: event.target.value as MailStatus })}>
                       {mailStatuses.filter((item) => item !== "deleted").map((item) => <option key={item} value={item}>{item}</option>)}
@@ -202,10 +203,7 @@ export function MailAccountManager() {
                     <input type="number" min={0} value={account.mailboxQuotaMb} disabled={savingId === account.id} onBlur={(event) => void patchAccount(account, { mailboxQuotaMb: Number(event.target.value) })} onChange={(event) => setAccounts((current) => current.map((item) => item.id === account.id ? { ...item, mailboxQuotaMb: Number(event.target.value) } : item))} />
                   </td>
                   <td>
-                    <div className="flex flex-wrap gap-2">
-                      <Link className="badge-muted" to={`/admin/users/${account.userId}/services`}>Services</Link>
-                      <Link className="badge-muted" to={`/admin/users/${account.userId}/permissions`}>Permissions</Link>
-                    </div>
+                    <span className="badge-muted">Follows Mail role assignment</span>
                   </td>
                   <td>
                     <div className="flex gap-2">
@@ -275,7 +273,7 @@ export function MailAccountManager() {
             </label>
           </div>
           <p className="text-sm text-slate-500">
-            Mail access, send, and receive permissions are controlled on the bound user's Services and Permissions pages.
+            Mail access, send, receive, and login behavior follows the role assigned in ChemVault Mail.
           </p>
         </form>
       </Modal>

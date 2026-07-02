@@ -122,7 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
       action: "mail_account.create",
       resourceType: "mail_account",
       resourceId: id,
-      details: { mailAddress: payload.mailAddress, authorizationSource: "user_system" },
+      details: { mailAddress: payload.mailAddress, mailRuntimeAuthority: "mail_role" },
     });
 
     const row = await env.DB.prepare(`SELECT * FROM mail_accounts WHERE id = ?`).bind(id).first<MailAccountRow>();

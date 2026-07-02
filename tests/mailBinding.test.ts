@@ -3,7 +3,7 @@ import { bindVerifiedMailAccount, type MailPasswordAuthResult } from "../functio
 import type { Env, ExternalIdentityRow, MailAccountRow, UserRow } from "../functions/_shared/types";
 
 describe("mail account binding", () => {
-  it("binds a verified ChemVault Mail account without granting mail-system authority", async () => {
+  it("binds a verified ChemVault Mail account without granting user-system authority", async () => {
     const db = new BindingMockD1();
     const user = db.insertUser("researcher@example.edu", "Researcher", { source: "google" });
     const account = await bindVerifiedMailAccount({
@@ -18,7 +18,7 @@ describe("mail account binding", () => {
     expect(account).toMatchObject({
       userId: user.id,
       mailAddress: "researcher@chemvault.science",
-      mailRole: "mailbox_user",
+      mailRole: "mailbox_admin",
     });
     expect(db.users.get(user.id)?.system_role).toBe("user");
     expect(db.serviceAccess.get(`${user.id}:chemvault_mail`)).toBeUndefined();

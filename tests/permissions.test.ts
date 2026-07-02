@@ -52,6 +52,25 @@ describe("permission evaluation", () => {
     });
   });
 
+  it("does not authorize Mail runtime rights from User Center permissions", () => {
+    const grants = snapshot({
+      services: [{ key: "chemvault_mail", status: "active" }],
+      userPermissions: [
+        { key: "mail:send", effect: "allow" },
+        { key: "service:chemvault_mail:access", effect: "allow" },
+      ],
+    });
+
+    expect(evaluatePermission({ ...baseUser, system_role: "owner" }, grants, "mail:send")).toEqual({
+      allowed: false,
+      reason: "missing_permission",
+    });
+    expect(canAccessService({ ...baseUser, system_role: "super_admin" }, grants, "chemvault_mail")).toEqual({
+      allowed: false,
+      reason: "missing_permission",
+    });
+  });
+
   it("makes explicit deny override role and user allow", () => {
     const result = evaluatePermission(
       baseUser,

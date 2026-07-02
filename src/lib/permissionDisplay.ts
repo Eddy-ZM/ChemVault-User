@@ -45,11 +45,6 @@ const categories: Record<string, CategoryDisplay> = {
     description: "Controls model viewing, editing, execution, and model administration.",
     order: 50,
   },
-  mail: {
-    label: "Mail",
-    description: "Controls mailbox access, sending, receiving, aliases, quota, and mail administration.",
-    order: 60,
-  },
   admin: {
     label: "Administration",
     description: "Controls user management, permission management, service settings, audit, and system settings.",
@@ -131,7 +126,6 @@ const pageServiceMap: Record<string, string> = {
   docs: "chemvault_docs",
   extract: "chemvault_extract",
   file: "chemvault_file",
-  mail: "chemvault_mail",
   model: "chemvault_model",
   molecule: "chemvault_molecule",
   notif: "chemvault_notif",
@@ -144,7 +138,6 @@ const categoryServiceMap: Record<string, string> = {
   admin: "chemvault_admin",
   docs: "chemvault_docs",
   file: "chemvault_file",
-  mail: "chemvault_mail",
   model: "chemvault_model",
 };
 

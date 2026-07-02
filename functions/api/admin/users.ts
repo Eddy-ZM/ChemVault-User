@@ -167,7 +167,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
         action: "mail_account.create",
         resourceType: "mail_account",
         resourceId: mailRow.id,
-        details: { mailAddress: mailRow.mail_address, createdWithUser: true, authorizationSource: "user_system" },
+        details: { mailAddress: mailRow.mail_address, createdWithUser: true, mailRuntimeAuthority: "mail_role" },
       });
     }
 

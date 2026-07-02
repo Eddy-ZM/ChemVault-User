@@ -82,7 +82,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
       actorUserId: actor.id,
       action: "mail_admin_sync.manual",
       resourceType: "mail_admin_sync",
-      details: { ...counts, authorizationSource: "user_system", importedAuthority: "record_only" },
+      details: { ...counts, importedAuthority: "record_only", mailRuntimeAuthority: "mail_role" },
     });
 
     return jsonResponse(request, counts);

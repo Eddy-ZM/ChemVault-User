@@ -1,4 +1,4 @@
-import { requireAdmin } from "../../_shared/permissions";
+import { isMailRoleManagedPermissionKey, requireAdmin } from "../../_shared/permissions";
 import { ApiError, handleApi, jsonResponse, readJson } from "../../_shared/responses";
 import { randomId } from "../../_shared/security";
 import type { Env, PermissionDefinition } from "../../_shared/types";
@@ -27,6 +27,9 @@ function validatePermissionPayload(input: unknown): Omit<PermissionDefinition, "
   }
   if (!name) throw new ApiError("VALIDATION_ERROR", "Permission name is required.", 400);
   if (!category) throw new ApiError("VALIDATION_ERROR", "Permission category is required.", 400);
+  if (isMailRoleManagedPermissionKey(key)) {
+    throw new ApiError("VALIDATION_ERROR", "Mail runtime permissions follow Mail role assignment and cannot be created in User Center.", 400);
+  }
 
   return {
     key,
@@ -40,7 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
     await requireAdmin(env, request);
     const rows = await env.DB.prepare(`SELECT * FROM permissions ORDER BY category, key`).all<PermissionDefinition>();
-    return jsonResponse(request, { permissions: (rows.results || []).map(toPublicPermission) });
+    return jsonResponse(request, { permissions: (rows.results || []).filter((row) => !isMailRoleManagedPermissionKey(row.key)).map(toPublicPermission) });
   });
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>

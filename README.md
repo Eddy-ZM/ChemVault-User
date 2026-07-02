@@ -102,14 +102,14 @@ User Center 为以下 ChemVault 服务提供统一账号与访问判断：
 
 - 为用户创建或分配 ChemVault 邮箱。
 - 管理邮箱地址、显示名称、邮箱状态、配额和别名。
-- 通过 User Center 的服务访问和权限中心控制邮箱访问、发送和接收能力。
+- 邮箱访问、发送、接收和登录行为遵循 ChemVault Mail 中分配的 Mail role。
 - 支持邮箱账号软删除。
 
 ### 邮箱系统同步
 
 - 支持导入 ChemVault Mail 管理员和超级管理员列表作为审计参考。
 - 支持接收 ChemVault Mail 推送的新用户和邮箱账号信息。
-- ChemVault Mail 同步不会自动授予 User Center 管理员角色或 Mail 权限。
+- ChemVault Mail 同步不会自动授予 User Center 管理员角色；Mail 收发权限由 ChemVault Mail role 决定。
 - 同步结果会显示在管理记录中，便于追踪和审计。
 
 ### 审计记录
@@ -150,7 +150,7 @@ User Center 为以下 ChemVault 服务提供统一账号与访问判断：
 - 具体业务功能由各 ChemVault 服务网站提供。
 - 第三方登录仅用于确认用户身份，不代表 ChemVault 会获取第三方服务中的业务数据。
 - ChemVault 邮箱绑定和申请用于连接 ChemVault 账号体系与 ChemVault Mail 服务。
-- ChemVault Mail 只作为邮箱身份和邮箱资料来源；服务访问、页面访问、管理员角色和功能权限均由 User Center 控制。
+- ChemVault Mail 是邮箱身份、邮箱资料和 Mail role 的来源；邮件收发与登录按 Mail role 执行，不在 User Center 单独配置。
 
 ## 版权
 

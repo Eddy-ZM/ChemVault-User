@@ -1,6 +1,7 @@
 import { getUserById } from "../../../../_shared/db";
 import {
   assertActorCanManageTarget,
+  isMailRoleManagedPermissionKey,
   loadAccessSnapshot,
   loadEffectivePermissionKeys,
   requireAdmin,
@@ -45,7 +46,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
       permissions: snapshot.userPermissions,
       rolePermissions: snapshot.rolePermissions,
       effectivePermissions: effective,
-      definitions: definitions.results || [],
+      definitions: (definitions.results || []).filter((definition) => !isMailRoleManagedPermissionKey(definition.key)),
     });
   });
 
@@ -59,9 +60,12 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
     const permissions = parsePermissionList(await readJson(request));
     const now = new Date().toISOString();
     const knownRows = await env.DB.prepare(`SELECT key FROM permissions`).all<{ key: string }>();
-    const known = new Set((knownRows.results || []).map((row) => row.key));
+    const known = new Set((knownRows.results || []).map((row) => row.key).filter((key) => !isMailRoleManagedPermissionKey(key)));
 
     for (const permission of permissions) {
+      if (isMailRoleManagedPermissionKey(permission.key)) {
+        throw new ApiError("VALIDATION_ERROR", "Mail runtime permissions follow Mail role assignment and cannot be set in User Center.", 400);
+      }
       if (!known.has(permission.key)) {
         throw new ApiError("VALIDATION_ERROR", `Unknown permission: ${permission.key}`, 400);
       }

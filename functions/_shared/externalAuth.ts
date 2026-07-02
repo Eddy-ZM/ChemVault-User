@@ -305,7 +305,7 @@ export async function bindVerifiedMailAccount(input: {
       mailUserId: input.mail.mailUserId,
       mailRole: input.mail.mailRole,
       mailStatus: input.mail.mailStatus,
-      authorizationSource: "user_system",
+      mailRuntimeAuthority: "mail_role",
     },
   });
 
@@ -460,7 +460,7 @@ async function upsertBoundMailAccount(
       .bind(
         userId,
         displayName,
-        "mailbox_user",
+        mail.mailRole,
         mail.mailStatus,
         1,
         1,
@@ -489,7 +489,7 @@ async function upsertBoundMailAccount(
       userId,
       mailAddress,
       displayName,
-      "mailbox_user",
+      mail.mailRole,
       mail.mailStatus,
       1,
       1,

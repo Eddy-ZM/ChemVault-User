@@ -126,8 +126,9 @@ export function ConnectedServices() {
             <div>
               <p className="font-semibold text-slate-950">{user.mailAccount.mailAddress}</p>
               <p className="mt-1 text-sm text-slate-500">
-                Mailbox is already bound to this ChemVault main account.
+                Mailbox is already bound to this ChemVault main account. Mail behavior follows the assigned Mail role.
               </p>
+              <p className="mt-1 text-xs text-slate-500">Mail role: {user.mailAccount.mailRole}</p>
             </div>
             <StatusBadge value={user.mailAccount.mailStatus} />
           </div>

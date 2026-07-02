@@ -79,8 +79,8 @@ export function MailSync() {
       </div>
       {error ? <div className="alert-error">{error}</div> : null}
       <div className="alert-info">
-        Mail system super/admin lists are imported only as reference records. User Center roles, service access,
-        and permissions remain the only source of authorization.
+        Mail system super/admin lists are imported only as reference records. Mail send, receive, and login behavior
+        follows the role assigned in ChemVault Mail.
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">

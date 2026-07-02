@@ -448,7 +448,7 @@ export function UserManagement() {
                   <input value={createForm.aliases} onChange={(event) => updateCreateForm({ aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
                 </label>
                 <p className="text-sm text-slate-500">
-                  Mail access, send, and receive permissions are managed from the user's Services and Permissions pages.
+                  Mail access, send, receive, and login behavior follows the role assigned in ChemVault Mail.
                 </p>
               </div>
             ) : null}
@@ -490,7 +490,7 @@ export function UserManagement() {
             <input value={mailForm.aliases} onChange={(event) => setMailForm({ ...mailForm, aliases: event.target.value })} placeholder="alias@chemvault.science, ..." />
           </label>
           <p className="text-sm text-slate-500">
-            Mail access, send, and receive permissions are managed from the user's Services and Permissions pages.
+            Mail access, send, receive, and login behavior follows the role assigned in ChemVault Mail.
           </p>
         </form>
       </Modal>

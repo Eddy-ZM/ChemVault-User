@@ -50,7 +50,7 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
           "User Content means files, documents, prompts, molecules, extracted text, model inputs, model outputs, API payloads, profile fields, mailbox configuration, aliases, comments, metadata, and any other material submitted, stored, generated, or transmitted through ChemVault by or for a user.",
         ],
         clauses: [
-          "Permissions include page permissions, service permissions, file permissions, docs permissions, model permissions, mail permissions, API permissions, administrative permissions, and any custom permission key created by an administrator.",
+          "Permissions include page permissions, service permissions, file permissions, docs permissions, model permissions, API permissions, administrative permissions, and any custom permission key created by an administrator. Mail sending, receiving, and login are governed by ChemVault Mail role assignment.",
           "Administrator includes owner, super admin, admin, service admin, staff, or any user who is granted permissions to manage other users, access settings, services, mailboxes, audit logs, or system configuration.",
           "Account Status includes active, disabled, suspended, deleted, or any similar status that ChemVault uses to control access.",
         ],
@@ -84,7 +84,7 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
       {
         title: "5. Account roles, permissions, and access decisions",
         paragraphs: [
-          "ChemVault uses account roles, system roles, user permissions, role permissions, page access, service access, mail-account settings, and administrative rules to determine whether a user may access a page, service, API, file, mailbox, model, document, audit log, or admin function.",
+          "ChemVault uses account roles, system roles, user permissions, role permissions, page access, service access, mail-account bindings, and administrative rules to determine whether a user may access a page, service, API, file, model, document, audit log, or admin function. Mailbox sending, receiving, and login follow ChemVault Mail role assignment.",
           "The original role field, including free, pro, and admin, may indicate plan or account tier. The system role field, including user, staff, service admin, admin, super admin, and owner, controls platform authority together with permissions and access records. A user may have a high account tier without administrator authority, or administrator authority without a paid plan.",
           "Owner and super admin roles may have broad or unrestricted access. Ordinary admins may be restricted from changing, deleting, disabling, or downgrading owner or super admin accounts. ChemVault Mail records do not grant User Center authority by themselves.",
         ],
@@ -97,12 +97,12 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
       {
         title: "6. ChemVault Mail accounts and aliases",
         paragraphs: [
-          "A Mail Account is an administrative assignment, not an automatic entitlement. ChemVault may allow an administrator to assign a chemvault.science mailbox, display name, mailbox status, aliases, and quota to a Main Account. Mail service access and mail feature permissions are controlled through User Center service access and permission records.",
+          "A Mail Account is an administrative assignment, not an automatic entitlement. ChemVault may allow an administrator to assign a chemvault.science mailbox, display name, mailbox status, aliases, and quota to a Main Account. Mail sending, receiving, and login behavior follows the role assigned in ChemVault Mail.",
           "You may use a Mail Account only for lawful, authorized, and policy-compliant activity. Mail Accounts may not be used for spam, phishing, credential theft, harassment, malware distribution, evasion of security controls, impersonation, unauthorized mass messaging, or activity that damages the reputation or deliverability of ChemVault domains.",
           "Mailboxes, aliases, quota, login rights, sending rights, and receiving rights may be changed, suspended, or removed by ChemVault or an authorized administrator at any time for security, abuse prevention, operational requirements, account termination, or policy enforcement.",
         ],
         clauses: [
-          "ChemVault Mail super users and admin users may be imported into synchronization records for audit and review, but they do not automatically receive User Center super admin or admin authority.",
+          "ChemVault Mail super users and admin users may be imported into synchronization records for audit and review, but they do not automatically receive User Center super admin or admin authority. Mail runtime authority remains tied to ChemVault Mail role assignment.",
           "Mailbox deletion may be implemented as soft deletion. Logs, aliases, routing history, administrative records, and security records may be retained after deletion where needed.",
           "You are responsible for messages, attachments, aliases, forwarding, and account activity performed through a Mail Account assigned to you.",
         ],
@@ -319,8 +319,8 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
           "ChemVault may also store synchronization records from ChemVault Mail, including super user and admin user lists, sync timestamps, source labels, and results of manual or future automated mail-admin synchronization.",
         ],
         clauses: [
-          "Permission and role records may be used to determine whether a user can access ChemVault File, Docs, Model, Extract, Molecule, Notif, Mail, Admin, API, and other services.",
-          "Mail-account records may include mail address, display name, aliases, status, quota, linked Main Account, and related mailbox metadata. Send, receive, login, service, page, and administrator authority are controlled by User Center access and permission records.",
+          "Permission and role records may be used to determine whether a user can access ChemVault File, Docs, Model, Extract, Molecule, Notif, Admin, API, and other services. ChemVault Mail runtime rights are determined by Mail role assignment.",
+          "Mail-account records may include mail address, display name, aliases, status, quota, linked Main Account, Mail role, and related mailbox metadata. Sending, receiving, and Mail login behavior follows ChemVault Mail role assignment.",
           "Administrative logs may record who changed a user, permission, role, mailbox, service access, page access, status, or security setting.",
         ],
       },
@@ -367,7 +367,7 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
           "Administrators may view or change account information, roles, permissions, mailboxes, usage data, status, audit logs, and access records according to their administrator permissions and organizational responsibility.",
         ],
         clauses: [
-          "Connected services may receive account id, email, name, role, system role, status, permission keys, service access, page access, and mail-account status when needed for authentication or authorization.",
+          "Connected services may receive account id, email, name, role, system role, status, permission keys, service access, page access, mail-account status, and Mail role metadata when needed for authentication or authorization.",
           "ChemVault intends not to expose password hashes, raw session tokens, token hashes, Apple private keys, JWT secrets, mail-system secrets, Turnstile secrets, or other sensitive secrets through user-facing APIs.",
           "The /api/access/check endpoint is intended to return only the minimum information needed for a connected service to determine access.",
         ],

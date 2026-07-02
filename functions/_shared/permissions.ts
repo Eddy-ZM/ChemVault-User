@@ -34,6 +34,14 @@ export interface AccessDecision {
   reason: AccessReason;
 }
 
+export function isMailRoleManagedServiceKey(serviceKey: string): boolean {
+  return serviceKey === "chemvault_mail";
+}
+
+export function isMailRoleManagedPermissionKey(permissionKey: string): boolean {
+  return permissionKey === "service:chemvault_mail:access" || permissionKey.startsWith("mail:");
+}
+
 const secretKeys = new Set([
   "password",
   "password_hash",
@@ -55,6 +63,7 @@ export function isSuperUser(user: Pick<UserRow, "system_role" | "source">): bool
 
 export function evaluatePermission(user: UserRow, snapshot: AccessSnapshot, permissionKey: string): AccessDecision {
   if (isInactiveUser(user)) return { allowed: false, reason: "user_inactive" };
+  if (isMailRoleManagedPermissionKey(permissionKey)) return { allowed: false, reason: "missing_permission" };
   if (user.system_role === "owner") return { allowed: true, reason: "allowed_by_owner" };
   if (user.system_role === "super_admin") return { allowed: true, reason: "allowed_by_super_admin" };
 
@@ -76,6 +85,7 @@ export function evaluatePermission(user: UserRow, snapshot: AccessSnapshot, perm
 
 export function canAccessService(user: UserRow, snapshot: AccessSnapshot, serviceKey: string): AccessDecision {
   if (isInactiveUser(user)) return { allowed: false, reason: "user_inactive" };
+  if (isMailRoleManagedServiceKey(serviceKey)) return { allowed: false, reason: "missing_permission" };
   if (isSuperUser(user)) return user.system_role === "owner" ? { allowed: true, reason: "allowed_by_owner" } : { allowed: true, reason: "allowed_by_super_admin" };
 
   const direct = snapshot.services.find((grant) => grant.key === serviceKey);
@@ -135,9 +145,9 @@ export async function loadAccessSnapshot(db: D1Database, user: UserRow): Promise
   ]);
 
   return {
-    rolePermissions: rolePermissions.results || [],
-    userPermissions: userPermissions.results || [],
-    services: services.results || [],
+    rolePermissions: (rolePermissions.results || []).filter((grant) => !isMailRoleManagedPermissionKey(grant.key)),
+    userPermissions: (userPermissions.results || []).filter((grant) => !isMailRoleManagedPermissionKey(grant.key)),
+    services: (services.results || []).filter((grant) => !isMailRoleManagedServiceKey(grant.key)),
     pages: pages.results || [],
   };
 }
@@ -146,7 +156,7 @@ export async function loadEffectivePermissionKeys(db: D1Database, user: UserRow)
   if (isInactiveUser(user)) return [];
   if (isSuperUser(user)) {
     const rows = await db.prepare(`SELECT key FROM permissions ORDER BY key`).all<{ key: string }>();
-    return (rows.results || []).map((row) => row.key);
+    return (rows.results || []).map((row) => row.key).filter((key) => !isMailRoleManagedPermissionKey(key));
   }
 
   const snapshot = await loadAccessSnapshot(db, user);
@@ -173,7 +183,7 @@ export async function enrichPublicUser<T extends { id: string }>(db: D1Database,
   const [permissions, services, pages, mailAccount] = await Promise.all([
     loadEffectivePermissionKeys(db, user),
     db
-      .prepare(`SELECT service_key FROM service_access WHERE user_id = ? AND status = 'active' ORDER BY service_key`)
+      .prepare(`SELECT service_key FROM service_access WHERE user_id = ? AND status = 'active' AND service_key != 'chemvault_mail' ORDER BY service_key`)
       .bind(user.id)
       .all<{ service_key: string }>(),
     db
@@ -257,7 +267,6 @@ export function assertActorCanManageTarget(input: {
   if (action === "delete" && target.system_role === "owner") {
     throw new ApiError("FORBIDDEN", "Owner accounts cannot be deleted.", 403);
   }
-
 }
 
 export function makeAuditDetails(details: Record<string, unknown>): string {

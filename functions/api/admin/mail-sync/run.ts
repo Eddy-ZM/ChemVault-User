@@ -21,7 +21,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) =>
     return jsonResponse(request, {
       status: "todo",
       message:
-        "Automatic mail admin record import is reserved for the future mail.chemvault.science admin API. User Center remains the authority for roles and permissions.",
+        "Automatic mail admin record import is reserved for the future mail.chemvault.science admin API. Mail runtime authority follows ChemVault Mail role assignment.",
       requiredEnv: ["MAIL_SYSTEM_SYNC_SECRET"],
     });
   });

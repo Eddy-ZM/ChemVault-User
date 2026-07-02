@@ -11,8 +11,7 @@ WHERE granted_by IS NULL
   AND service_key = 'chemvault_mail';
 
 UPDATE mail_accounts
-SET mail_role = 'mailbox_user',
-    can_send = 1,
+SET can_send = 1,
     can_receive = 1,
     can_login_mail = 1,
     updated_at = datetime('now')

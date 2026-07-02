@@ -22,7 +22,6 @@ export const serviceCatalog: ServiceSeed[] = [
   { key: "chemvault_main", name: "Main" },
   { key: "chemvault_app", name: "App" },
   { key: "chemvault_user", name: "User Center" },
-  { key: "chemvault_mail", name: "Mail" },
   { key: "chemvault_file", name: "File" },
   { key: "chemvault_docs", name: "Docs" },
   { key: "chemvault_model", name: "Model" },
@@ -55,7 +54,6 @@ const servicePermissions = [
   "service:chemvault_main:access",
   "service:chemvault_app:access",
   "service:chemvault_user:access",
-  "service:chemvault_mail:access",
   "service:chemvault_file:access",
   "service:chemvault_docs:access",
   "service:chemvault_model:access",
@@ -93,7 +91,6 @@ const pagePermissions = [
 const filePermissions = ["file:read", "file:upload", "file:delete", "file:share", "file:admin", "file:private_access", "file:public_manage"];
 const docsPermissions = ["docs:read", "docs:create", "docs:edit", "docs:delete", "docs:publish", "docs:admin"];
 const modelPermissions = ["model:view", "model:create", "model:edit", "model:delete", "model:run", "model:admin"];
-const mailPermissions = ["mail:access", "mail:send", "mail:receive", "mail:manage_alias", "mail:manage_quota", "mail:admin", "mail:super"];
 const adminPermissions = [
   "admin:users:view",
   "admin:users:create",
@@ -118,7 +115,6 @@ const categoryByPrefix: Record<string, string> = {
   file: "file",
   docs: "docs",
   model: "model",
-  mail: "mail",
   admin: "admin",
   api: "api",
 };
@@ -129,7 +125,6 @@ export const permissionSeeds: PermissionSeed[] = [
   ...filePermissions,
   ...docsPermissions,
   ...modelPermissions,
-  ...mailPermissions,
   ...adminPermissions,
   ...apiPermissions,
 ].map((key) => ({
