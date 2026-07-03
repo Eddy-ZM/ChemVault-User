@@ -170,8 +170,12 @@ export function Register() {
           </span>
         </label>
         <p className="text-xs leading-5 text-slate-500">
+          By creating an account, you agree to the{" "}
+          <Link className="font-semibold text-blue-700" to="/terms">Terms of Service</Link>{" "}
+          and acknowledge the{" "}
+          <Link className="font-semibold text-blue-700" to="/privacy">Privacy Policy</Link>.
           Continuing with a third-party sign-in provider creates or signs into a ChemVault main account under the same
-          Terms and Privacy Policy.
+          terms.
         </p>
         {registerOptions.turnstile.required ? (
           registerOptions.turnstile.siteKey ? (

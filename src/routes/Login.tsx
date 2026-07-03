@@ -97,6 +97,12 @@ export function Login() {
             Create an account
           </Link>
         </p>
+        <p className="text-center text-xs leading-5 text-slate-500">
+          Use of ChemVault is subject to the{" "}
+          <Link className="font-semibold text-blue-700" to="/terms">Terms of Service</Link>{" "}
+          and{" "}
+          <Link className="font-semibold text-blue-700" to="/privacy">Privacy Policy</Link>.
+        </p>
       </form>
       <UserSystemFooter compact />
     </main>

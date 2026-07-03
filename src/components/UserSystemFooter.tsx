@@ -19,6 +19,7 @@ export function UserSystemFooter({ compact = false }: { compact?: boolean }) {
         <nav aria-label="ChemVault legal links">
           <a href="/terms">Terms</a>
           <a href="/privacy">Privacy</a>
+          <a href="https://chemvault.science/security">Security / Abuse</a>
         </nav>
       </div>
     </footer>
