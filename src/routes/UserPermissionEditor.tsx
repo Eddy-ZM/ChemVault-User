@@ -146,7 +146,7 @@ export function UserPermissionEditor() {
           <p className="label">User Permission Editor</p>
           <h1>Direct permissions</h1>
           <p className="text-sm text-slate-500">
-            System role defaults are used unless you explicitly allow or deny a permission here.
+            User System defaults are used unless you explicitly allow or deny a permission here.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -292,13 +292,13 @@ export function UserPermissionEditor() {
 }
 
 function effectLabel(effect: LocalEffect): string {
-  if (effect === "inherit") return "Follow role";
+  if (effect === "inherit") return "User System default";
   if (effect === "allow") return "Allow";
   return "Deny";
 }
 
 function categoryActionLabel(effect: LocalEffect): string {
-  if (effect === "inherit") return "Set all to follow role";
+  if (effect === "inherit") return "Set all to User System default";
   if (effect === "allow") return "Allow all";
   return "Deny all";
 }
@@ -382,7 +382,7 @@ function getPreviewEffectivePermissions(
 function getSourceLabel(effect: LocalEffect, roleEffect?: PermissionEffect): string {
   if (effect === "allow") return "Direct allow";
   if (effect === "deny") return "Direct deny";
-  if (roleEffect === "allow") return "Allowed by role";
-  if (roleEffect === "deny") return "Denied by role";
-  return "Follow role";
+  if (roleEffect === "allow") return "Allowed by User System default";
+  if (roleEffect === "deny") return "Denied by User System default";
+  return "User System default";
 }

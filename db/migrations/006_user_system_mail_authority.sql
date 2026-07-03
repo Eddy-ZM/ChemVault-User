@@ -1,6 +1,6 @@
--- User Center is the only authorization source for ChemVault Mail access.
--- Legacy Mail sync/binding wrote these records with granted_by = NULL.
--- Admin-created User Center grants keep their actor id and are preserved.
+-- Historical cleanup for legacy Mail grants that were written before Mail role authority was clarified.
+-- Full removal of User Center Mail runtime grants happens in 007_mail_role_authority.sql.
+-- Non-Mail service, page, and feature permissions remain managed by User Center.
 
 DELETE FROM user_permissions
 WHERE granted_by IS NULL

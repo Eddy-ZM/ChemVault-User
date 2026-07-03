@@ -1,4 +1,4 @@
--- ChemVault Mail send/receive/login authority follows Mail System role assignment.
+-- ChemVault Mail send/receive/login authority follows ChemVault Mail role assignment.
 -- User Center keeps mailbox binding and mail_role metadata but does not grant Mail runtime access.
 
 DELETE FROM user_permissions

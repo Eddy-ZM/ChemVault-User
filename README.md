@@ -89,7 +89,8 @@ User Center 为以下 ChemVault 服务提供统一账号与访问判断：
 
 - 管理全局权限定义。
 - 为用户配置直接授权或拒绝。
-- 按系统角色分配默认权限。
+- 除 ChemVault Mail 收发、接收和登录权限外，服务、页面、文件、文档、模型、API 和后台权限均由 User Center 统一设置。
+- 支持按 User System 默认规则和用户直接规则计算最终权限。
 - 支持针对具体服务和页面的访问控制。
 
 ### 服务与页面访问
@@ -147,6 +148,7 @@ User Center 为以下 ChemVault 服务提供统一账号与访问判断：
 ## 产品边界
 
 - User Center 负责 ChemVault 统一账号、登录、权限和邮箱账号管理。
+- 除 ChemVault Mail 的访问、发送、接收和登录行为遵循 Mail role 外，其他 ChemVault 服务访问、页面访问和功能权限均由 User Center 统一配置与下发。
 - 具体业务功能由各 ChemVault 服务网站提供。
 - 第三方登录仅用于确认用户身份，不代表 ChemVault 会获取第三方服务中的业务数据。
 - ChemVault 邮箱绑定和申请用于连接 ChemVault 账号体系与 ChemVault Mail 服务。
