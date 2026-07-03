@@ -29,6 +29,7 @@ export const serviceCatalog: ServiceSeed[] = [
   { key: "chemvault_molecule", name: "Molecule" },
   { key: "chemvault_notif", name: "Notif" },
   { key: "chemvault_admin", name: "Admin" },
+  { key: "chemvault_main_admin", name: "Main Site Admin" },
 ];
 
 export const pageCatalog: PageSeed[] = [
@@ -42,6 +43,9 @@ export const pageCatalog: PageSeed[] = [
   { key: "admin_mail", path: "/admin/mail", name: "Admin Mail" },
   { key: "admin_services", path: "/admin/services", name: "Admin Services" },
   { key: "admin_audit", path: "/admin/audit", name: "Admin Audit" },
+  { key: "main_admin", path: "https://chemvault.science/admin", name: "Main Admin" },
+  { key: "main_admin_forms", path: "https://chemvault.science/admin/forms", name: "Main Forms Admin" },
+  { key: "main_admin_leads", path: "https://chemvault.science/admin/leads", name: "Main Leads Admin" },
   { key: "model", path: "/model", name: "Model" },
   { key: "file", path: "/file", name: "File" },
   { key: "docs", path: "/docs", name: "Docs" },
@@ -61,6 +65,7 @@ const servicePermissions = [
   "service:chemvault_molecule:access",
   "service:chemvault_notif:access",
   "service:chemvault_admin:access",
+  "service:chemvault_main_admin:access",
 ];
 
 const pagePermissions = [
@@ -80,6 +85,9 @@ const pagePermissions = [
   "page:admin_services:view",
   "page:admin_services:edit",
   "page:admin_audit:view",
+  "page:main_admin:view",
+  "page:main_admin_forms:view",
+  "page:main_admin_leads:view",
   "page:model:view",
   "page:file:view",
   "page:docs:view",
@@ -107,6 +115,17 @@ const adminPermissions = [
   "admin:audit:view",
   "admin:system_settings:edit",
 ];
+const mainAdminPermissions = [
+  "main_admin:access",
+  "main_admin:forms:read",
+  "main_admin:forms:write",
+  "main_admin:forms:reply",
+  "main_admin:leads:read",
+  "main_admin:leads:write",
+  "main_admin:leads:notify",
+  "main_admin:compliance:read",
+  "main_admin:compliance:write",
+];
 const apiPermissions = ["api:read", "api:write", "api:admin", "api:key:create", "api:key:revoke"];
 
 const categoryByPrefix: Record<string, string> = {
@@ -116,6 +135,7 @@ const categoryByPrefix: Record<string, string> = {
   docs: "docs",
   model: "model",
   admin: "admin",
+  main_admin: "main_admin",
   api: "api",
 };
 
@@ -126,6 +146,7 @@ export const permissionSeeds: PermissionSeed[] = [
   ...docsPermissions,
   ...modelPermissions,
   ...adminPermissions,
+  ...mainAdminPermissions,
   ...apiPermissions,
 ].map((key) => ({
   key,
@@ -181,7 +202,11 @@ export const defaultRolePermissions: Record<SystemRole, string[]> = {
     "page:admin_services:view",
     "page:admin_services:edit",
     "page:admin_audit:view",
+    "page:main_admin:view",
+    "page:main_admin_forms:view",
+    "page:main_admin_leads:view",
     "service:chemvault_admin:access",
+    "service:chemvault_main_admin:access",
     "admin:users:view",
     "admin:users:create",
     "admin:users:edit",
@@ -192,6 +217,15 @@ export const defaultRolePermissions: Record<SystemRole, string[]> = {
     "admin:services:view",
     "admin:services:edit",
     "admin:audit:view",
+    "main_admin:access",
+    "main_admin:forms:read",
+    "main_admin:forms:write",
+    "main_admin:forms:reply",
+    "main_admin:leads:read",
+    "main_admin:leads:write",
+    "main_admin:leads:notify",
+    "main_admin:compliance:read",
+    "main_admin:compliance:write",
   ],
   super_admin: [],
   owner: [],

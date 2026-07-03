@@ -7,6 +7,7 @@ import {
   evaluatePermission,
   makeAuditDetails,
 } from "../functions/_shared/permissions";
+import { defaultRolePermissions, permissionSeeds } from "../functions/_shared/permissionCatalog";
 import type { AccessSnapshot, UserRow } from "../functions/_shared/types";
 import { buildDeletedUserRecord } from "../functions/_shared/userDeletion";
 
@@ -221,5 +222,27 @@ describe("permission evaluation", () => {
       globalStatus: "active",
     });
     expect(JSON.stringify(record)).not.toContain("secret-password-hash");
+  });
+
+  it("defines main-site admin permissions for Forms and Leads", () => {
+    const keys = new Set(permissionSeeds.map((permission) => permission.key));
+
+    for (const key of [
+      "service:chemvault_main_admin:access",
+      "page:main_admin_forms:view",
+      "page:main_admin_leads:view",
+      "main_admin:access",
+      "main_admin:forms:read",
+      "main_admin:forms:write",
+      "main_admin:forms:reply",
+      "main_admin:leads:read",
+      "main_admin:leads:write",
+      "main_admin:leads:notify",
+    ]) {
+      expect(keys.has(key)).toBe(true);
+      expect(defaultRolePermissions.admin).toContain(key);
+    }
+
+    expect(defaultRolePermissions.admin).toContain("service:chemvault_main_admin:access");
   });
 });

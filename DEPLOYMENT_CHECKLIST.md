@@ -31,6 +31,8 @@ Target domain: `https://user.chemvault.science`
 - [ ] Confirm SSL/TLS mode is Full or Full strict.
 - [ ] Wait for Pages custom domain certificate issuance.
 - [ ] Create a production admin account with a real email and strong password.
+- [ ] Apply `db/migrations/008_main_site_admin_permissions.sql` so User Center exposes ChemVault main-site Forms/Leads admin permissions.
+- [ ] Confirm `ziwen.mu@chemvault.science` and `admin@chemvault.science` have the needed main-site admin permissions before disabling the main-site token fallback.
 
 Current deployed URL before custom domain binding:
 
@@ -68,5 +70,7 @@ Smoke tested on `https://chemvault-user.pages.dev` before custom domain binding.
 - [x] `POST /api/auth/logout` returned 200.
 - [x] Normal user `GET /api/admin/users` returned 403.
 - [x] Admin `GET /api/admin/users` returned 200.
+- [ ] `GET /api/access/check?permission=main_admin:forms:read` returns `allowed=true` for approved main-site admins.
+- [ ] `GET /api/access/check?permission=main_admin:leads:read` returns `allowed=true` for approved main-site admins.
 
 Do not paste real cookies, session tokens, passwords, or `JWT_SECRET` into this file.
