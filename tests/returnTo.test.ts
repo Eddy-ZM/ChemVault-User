@@ -14,6 +14,12 @@ describe("returnTo validation", () => {
     expect(getSafeReturnTo("https://501bcba2.chemvault-files.pages.dev/")).toBe(
       "https://501bcba2.chemvault-files.pages.dev/",
     );
+    expect(getSafeReturnTo("https://files-staging.chemvault.science/")).toBe(
+      "https://files-staging.chemvault.science/",
+    );
+    expect(sanitizeReturnTo("https://files-staging.chemvault.science/library")).toBe(
+      "https://files-staging.chemvault.science/library",
+    );
   });
 
   it("allows localhost development URLs", () => {

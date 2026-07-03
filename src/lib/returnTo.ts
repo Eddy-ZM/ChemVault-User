@@ -6,6 +6,7 @@ const allowedProductionHosts = new Set([
   "extract.chemvault.science",
   "file.chemvault.science",
   "files.chemvault.science",
+  "files-staging.chemvault.science",
   "docs.chemvault.science",
   "model.chemvault.science",
   "molecule.chemvault.science",
