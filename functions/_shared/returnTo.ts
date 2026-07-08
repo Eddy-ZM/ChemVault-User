@@ -1,7 +1,6 @@
 const allowedProductionHosts = new Set([
   "user.chemvault.science",
   "app.chemvault.science",
-  "extract.chemvault.science",
   "file.chemvault.science",
   "files.chemvault.science",
   "files-staging.chemvault.science",
@@ -9,6 +8,7 @@ const allowedProductionHosts = new Set([
   "model.chemvault.science",
   "molecule.chemvault.science",
   "notif.chemvault.science",
+  "lab.chemvault.science",
   "chemvault.science",
 ]);
 
@@ -18,6 +18,7 @@ const allowedPagesPreviewSuffixes = [
   ".chemvault-user.pages.dev",
   ".chemvault-app.pages.dev",
   ".chemvault-docs.pages.dev",
+  ".chemvault-lab.pages.dev",
 ];
 
 export function sanitizeReturnTo(value?: string | null, fallback = "/dashboard"): string {

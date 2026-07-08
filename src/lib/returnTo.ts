@@ -3,7 +3,6 @@ import type { NavigateFunction } from "react-router-dom";
 const allowedProductionHosts = new Set([
   "user.chemvault.science",
   "app.chemvault.science",
-  "extract.chemvault.science",
   "file.chemvault.science",
   "files.chemvault.science",
   "files-staging.chemvault.science",
@@ -11,6 +10,7 @@ const allowedProductionHosts = new Set([
   "model.chemvault.science",
   "molecule.chemvault.science",
   "notif.chemvault.science",
+  "lab.chemvault.science",
   "chemvault.science",
 ]);
 
@@ -20,6 +20,7 @@ const allowedPagesPreviewSuffixes = [
   ".chemvault-user.pages.dev",
   ".chemvault-app.pages.dev",
   ".chemvault-docs.pages.dev",
+  ".chemvault-lab.pages.dev",
 ];
 
 export function getSafeReturnTo(rawValue: string | null | undefined, fallback = "/dashboard"): string {
@@ -47,5 +48,23 @@ export function navigateToReturnTo(returnTo: string, navigate: NavigateFunction)
     navigate(returnTo, { replace: true });
     return;
   }
+  if (shouldUseUserSystemHandoff(returnTo)) {
+    window.location.assign(`/api/auth/handoff/start?returnTo=${encodeURIComponent(returnTo)}`);
+    return;
+  }
   window.location.assign(returnTo);
+}
+
+function shouldUseUserSystemHandoff(returnTo: string): boolean {
+  try {
+    const url = new URL(returnTo);
+    const isLabHost =
+      url.hostname === "lab.chemvault.science" ||
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname.endsWith(".chemvault-lab.pages.dev");
+    return isLabHost && url.pathname === "/auth/callback";
+  } catch {
+    return false;
+  }
 }

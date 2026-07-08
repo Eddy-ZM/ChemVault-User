@@ -20,6 +20,12 @@ describe("returnTo validation", () => {
     expect(sanitizeReturnTo("https://files-staging.chemvault.science/library")).toBe(
       "https://files-staging.chemvault.science/library",
     );
+    expect(getSafeReturnTo("https://lab.chemvault.science/auth/callback")).toBe(
+      "https://lab.chemvault.science/auth/callback",
+    );
+    expect(sanitizeReturnTo("https://preview.chemvault-lab.pages.dev/auth/callback")).toBe(
+      "https://preview.chemvault-lab.pages.dev/auth/callback",
+    );
   });
 
   it("allows localhost development URLs", () => {
