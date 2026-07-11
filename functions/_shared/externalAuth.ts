@@ -1,4 +1,5 @@
 import { createSession, sessionCookie } from "./auth";
+import { assertUserCanAuthenticate } from "./userStatus";
 import { getUserByEmail, getUserById, insertDefaultServices, toPublicUser } from "./db";
 import { loadUserMailAccount, toPublicMailAccount, writeAuditLog } from "./permissions";
 import { ApiError, jsonResponse } from "./responses";
@@ -318,12 +319,7 @@ export async function completeSsoLogin(input: {
   user: UserRow;
   returnTo?: string;
 }): Promise<Response> {
-  if (input.user.status === "disabled" || input.user.global_status === "disabled") {
-    throw new ApiError("USER_DISABLED", "This account has been disabled.", 403);
-  }
-  if (input.user.status === "deleted" || input.user.global_status === "deleted") {
-    throw new ApiError("USER_DELETED", "This account has been deleted.", 403);
-  }
+  assertUserCanAuthenticate(input.user);
 
   const now = new Date().toISOString();
   await input.env.DB.prepare(`UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?`)

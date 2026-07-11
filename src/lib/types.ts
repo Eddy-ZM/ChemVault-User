@@ -1,5 +1,5 @@
 export type UserRole = "free" | "pro" | "admin";
-export type UserStatus = "active" | "disabled" | "deleted";
+export type UserStatus = "active" | "suspended" | "deletion_pending" | "disabled" | "deleted";
 export type SystemRole = "user" | "staff" | "service_admin" | "admin" | "super_admin" | "owner";
 export type AccessStatus = "active" | "disabled" | "suspended";
 export type PermissionEffect = "allow" | "deny";

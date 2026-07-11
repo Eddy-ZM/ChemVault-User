@@ -3,6 +3,7 @@ import { verifyUserSystemHandoffToken } from "../../../_shared/handoff";
 import { enrichPublicUser } from "../../../_shared/permissions";
 import { ApiError, handleApi, jsonResponse } from "../../../_shared/responses";
 import type { Env } from "../../../_shared/types";
+import { isUserActive } from "../../../_shared/userStatus";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
@@ -13,7 +14,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
 
     const payload = await verifyUserSystemHandoffToken(env, token, "chemvault-lab");
     const user = await getUserById(env.DB, payload.sub);
-    if (!user || user.status !== "active" || user.global_status === "disabled" || user.global_status === "deleted") {
+    if (!user || !isUserActive(user)) {
       throw new ApiError("UNAUTHORIZED", "User System user is not active.", 401);
     }
 

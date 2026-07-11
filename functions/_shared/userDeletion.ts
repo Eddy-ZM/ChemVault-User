@@ -1,4 +1,5 @@
 import { writeAuditLog } from "./permissions";
+import { runDistributedLifecycleAction, type LifecycleRun } from "./lifecycle";
 import type { Env, UserRow } from "./types";
 
 export interface DeletedUserRecord {
@@ -25,14 +26,48 @@ export function buildDeletedUserRecord(user: UserRow): DeletedUserRecord {
   };
 }
 
+export interface DeleteUserResult {
+  deletedUser: DeletedUserRecord;
+  lifecycleJob: LifecycleRun;
+}
+
 export async function permanentlyDeleteUser(input: {
   env: Env;
   request: Request;
   target: UserRow;
   actorUserId?: string | null;
   action: "self_delete" | "admin_delete";
-}): Promise<DeletedUserRecord> {
+}): Promise<DeleteUserResult> {
   const deletedUser = buildDeletedUserRecord(input.target);
+  await input.env.DB.batch([
+    input.env.DB
+      .prepare(`UPDATE users SET status = 'deletion_pending', global_status = 'deletion_pending', updated_at = ? WHERE id = ?`)
+      .bind(new Date().toISOString(), input.target.id),
+    input.env.DB.prepare(`DELETE FROM sessions WHERE user_id = ?`).bind(input.target.id),
+  ]);
+
+  const lifecycleJob = await runDistributedLifecycleAction({
+    env: input.env,
+    target: input.target,
+    actorUserId: input.actorUserId,
+    action: "delete",
+  });
+  if (lifecycleJob.status !== "completed") {
+    await writeAuditLog({
+      env: input.env,
+      request: input.request,
+      actorUserId: input.actorUserId || null,
+      targetUserId: input.target.id,
+      action: "user.delete.pending",
+      resourceType: "user",
+      resourceId: input.target.id,
+      details: {
+        lifecycleJobId: lifecycleJob.id,
+        services: lifecycleJob.results.map((result) => ({ service: result.service, status: result.status })),
+      },
+    });
+    return { deletedUser, lifecycleJob };
+  }
 
   await input.env.DB.prepare(`DELETE FROM audit_logs WHERE actor_user_id = ? OR target_user_id = ?`)
     .bind(input.target.id, input.target.id)
@@ -47,13 +82,13 @@ export async function permanentlyDeleteUser(input: {
     resourceType: "user",
     resourceId: input.target.id,
     details: {
-      deletedUser,
-      deletionMode: "hard_delete_after_single_audit_record",
+      lifecycleJobId: lifecycleJob.id,
+      deletionMode: "distributed_hard_delete",
+      services: lifecycleJob.results.map((result) => ({ service: result.service, status: result.status })),
     },
   });
 
   await input.env.DB.batch([
-    input.env.DB.prepare(`DELETE FROM sessions WHERE user_id = ?`).bind(input.target.id),
     input.env.DB.prepare(`DELETE FROM external_identities WHERE user_id = ?`).bind(input.target.id),
     input.env.DB.prepare(`DELETE FROM mail_accounts WHERE user_id = ?`).bind(input.target.id),
     input.env.DB.prepare(`DELETE FROM connected_services WHERE user_id = ?`).bind(input.target.id),
@@ -64,5 +99,5 @@ export async function permanentlyDeleteUser(input: {
     input.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(input.target.id),
   ]);
 
-  return deletedUser;
+  return { deletedUser, lifecycleJob };
 }

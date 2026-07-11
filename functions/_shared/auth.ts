@@ -2,6 +2,7 @@ import { ApiError } from "./responses";
 import { createSessionJwt, randomId, sha256Hex, verifySessionJwt } from "./security";
 import { getUserById } from "./db";
 import type { AuthContext, Env, UserRow } from "./types";
+import { isUserActive } from "./userStatus";
 
 const sessionDays = 30;
 
@@ -90,13 +91,7 @@ export async function getAuthContext(env: Env, request: Request): Promise<AuthCo
 
   if (!session || new Date(session.expires_at).getTime() <= Date.now()) return null;
   const user = await getUserById(env.DB, session.user_id);
-  if (
-    !user ||
-    user.status === "deleted" ||
-    user.status === "disabled" ||
-    user.global_status === "deleted" ||
-    user.global_status === "disabled"
-  ) {
+  if (!user || !isUserActive(user)) {
     return null;
   }
 

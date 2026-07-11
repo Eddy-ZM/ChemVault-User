@@ -124,8 +124,8 @@ export function validateRole(role: unknown): UserRole {
 }
 
 export function validateStatus(status: unknown): UserStatus {
-  if (status === "active" || status === "disabled" || status === "deleted") return status;
-  throw new ApiError("VALIDATION_ERROR", "Status must be active, disabled, or deleted.", 400);
+  if (status === "active" || status === "suspended" || status === "deletion_pending" || status === "disabled" || status === "deleted") return status;
+  throw new ApiError("VALIDATION_ERROR", "Status must be active, suspended, deletion_pending, disabled, or deleted.", 400);
 }
 
 export function validateSystemRole(role: unknown): SystemRole {

@@ -1,0 +1,28 @@
+name: Lifecycle reconciliation
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lifecycle-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      LIFECYCLE_RECONCILE_SECRET: ${{ secrets.LIFECYCLE_RECONCILE_SECRET }}
+    steps:
+      - name: Reconcile failed lifecycle jobs
+        run: |
+          test -n "$LIFECYCLE_RECONCILE_SECRET"
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $LIFECYCLE_RECONCILE_SECRET" \
+            https://user.chemvault.science/api/internal/lifecycle/reconcile

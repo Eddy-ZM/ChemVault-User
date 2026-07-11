@@ -18,7 +18,7 @@ interface AgreementDocument {
   closing: string;
 }
 
-const updatedAt = "June 27, 2026";
+const updatedAt = "July 8, 2026";
 
 const agreements: Record<AgreementKind, AgreementDocument> = {
   terms: {
@@ -26,7 +26,8 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
     eyebrow: "Main account system agreement",
     icon: FileCheck2,
     intro: [
-      "These Terms of Service constitute a binding agreement between ChemVault and the individual or entity that creates, accesses, administers, or uses a ChemVault account, ChemVault User Center, ChemVault Mail sign-in, Apple Account sign-in, or any connected ChemVault service that relies on the ChemVault main account system.",
+      "Draft only. This account-system terms text is not legal advice and must be reviewed by qualified counsel before commercial launch, enterprise contracting, regulated data processing, or public legal reliance.",
+      "These draft Terms of Service describe the operational rules ChemVault intends to apply to individuals or entities that create, access, administer, or use a ChemVault account, ChemVault User Center, ChemVault Mail sign-in, Apple Account sign-in, or any connected ChemVault service that relies on the ChemVault main account system.",
       "ChemVault User Center at user.chemvault.science is the identity authority, permission center, mail-account control plane, and administrative console for the ChemVault ecosystem. These Terms apply to the main account system and to connected services, including ChemVault Search, Extract, Files, Docs, Model, Molecule, Notif, Mail, API surfaces, and administrator workflows.",
       "If you use ChemVault on behalf of a laboratory, university, research group, company, institution, team, or other organization, you represent that you are authorized to accept these Terms for that organization and that your use complies with the organization's internal policies, data rules, and security requirements.",
     ],
@@ -283,6 +284,7 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
     eyebrow: "Identity and access data policy",
     icon: ShieldCheck,
     intro: [
+      "Draft only. This account-system privacy text is not legal advice and must be reviewed by qualified counsel before commercial launch, enterprise contracting, regulated data processing, or public legal reliance.",
       "This Privacy Policy explains how ChemVault collects, uses, discloses, retains, and protects information in connection with ChemVault User Center, ChemVault Mail sign-in, Apple Account sign-in, Cloudflare Turnstile verification, and connected ChemVault services that rely on the main account system.",
       "ChemVault User Center is designed to serve as the identity authority and permission center for the ChemVault ecosystem. As a result, limited account, role, permission, mail-account, service-access, page-access, session, usage, and audit information may be used across ChemVault services to authenticate users and enforce access decisions.",
       "This Policy is intended to describe operational handling for the current product. If ChemVault enters into a signed data processing agreement, enterprise agreement, institutional agreement, or other written contract, that agreement may include additional privacy and security terms for the covered account or organization.",
@@ -400,7 +402,7 @@ const agreements: Record<AgreementKind, AgreementDocument> = {
         title: "10. Security safeguards",
         paragraphs: [
           "ChemVault uses technical, organizational, and administrative safeguards designed to reduce unauthorized access, credential exposure, data loss, and accidental disclosure. These safeguards may include password hashing, httpOnly session cookies, hashed session tokens, role checks, permission checks, page access controls, service access controls, admin guards, soft deletion, audit logging, and Cloudflare security services.",
-          "No online service can guarantee absolute security. Users must protect credentials, use trusted devices, keep account information current, avoid sharing sessions or tokens, and report suspected compromise promptly.",
+          "No security measure is absolute, and ChemVault cannot guarantee that unauthorized access, data loss, provider outages, vulnerabilities, or configuration mistakes will never occur. Users must protect credentials, use trusted devices, keep account information current, avoid sharing sessions or tokens, and report suspected compromise promptly.",
         ],
         clauses: [
           "ChemVault may restrict access, revoke sessions, force reauthentication, disable accounts, or require additional verification when security risk is detected.",

@@ -17,6 +17,12 @@ COOKIE_DOMAIN = ".chemvault.science"
 NODE_ENV = "production"
 MAIL_APPLICATION_TO = "it.apply@chemvault.science"
 MAIL_APPLICATION_FROM = "no-reply@chemvault.science"
+LIFECYCLE_REQUIRED_SERVICES = "files,lab,notifications,mail,extract"
+FILES_LIFECYCLE_URL = "https://file.chemvault.science/api/internal/lifecycle"
+LAB_LIFECYCLE_URL = "https://lab.chemvault.science/api/internal/lifecycle"
+NOTIFICATIONS_LIFECYCLE_URL = "https://notify.chemvault.science/api/internal/lifecycle"
+MAIL_LIFECYCLE_URL = "https://mail.chemvault.science/api/internal/lifecycle"
+EXTRACT_LIFECYCLE_URL = "https://api.chemvault.science/internal/lifecycle"
 # Optional once the mail system exposes an SSO authorize endpoint:
 # MAIL_SYSTEM_SSO_URL = "https://mail.chemvault.science/api/sso/authorize"
 # Optional once Apple Developer Sign in with Apple is configured:
@@ -47,3 +53,4 @@ MAIL_APPLICATION_FROM = "no-reply@chemvault.science"
 # wrangler pages secret put MICROSOFT_CLIENT_SECRET --project-name chemvault-user
 # wrangler pages secret put GITHUB_CLIENT_SECRET --project-name chemvault-user
 # wrangler pages secret put TURNSTILE_SECRET_KEY --project-name chemvault-user
+# wrangler pages secret put LIFECYCLE_SERVICE_SECRET --project-name chemvault-user

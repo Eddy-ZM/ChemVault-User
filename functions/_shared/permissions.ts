@@ -12,6 +12,7 @@ import type {
   SystemRole,
   UserRow,
 } from "./types";
+import { isUserActive } from "./userStatus";
 
 export type AccessReason =
   | "allowed_by_owner"
@@ -54,7 +55,7 @@ const secretKeys = new Set([
 ]);
 
 export function isInactiveUser(user: Pick<UserRow, "status" | "global_status">): boolean {
-  return user.status === "disabled" || user.status === "deleted" || user.global_status === "disabled" || user.global_status === "deleted";
+  return !isUserActive(user);
 }
 
 export function isSuperUser(user: Pick<UserRow, "system_role" | "source">): boolean {

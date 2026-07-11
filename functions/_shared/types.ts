@@ -1,8 +1,8 @@
 export type UserRole = "free" | "pro" | "admin";
-export type UserStatus = "active" | "disabled" | "deleted";
+export type UserStatus = "active" | "suspended" | "deletion_pending" | "disabled" | "deleted";
 export type SystemRole = "user" | "staff" | "service_admin" | "admin" | "super_admin" | "owner";
 export type UserSource = "local" | "mail_system" | "admin_created" | string;
-export type GlobalStatus = "active" | "disabled" | "deleted" | string;
+export type GlobalStatus = UserStatus | string;
 export type PermissionEffect = "allow" | "deny";
 export type AccessStatus = "active" | "disabled" | "suspended";
 export type MailRole = "mailbox_user" | "mailbox_admin" | "mailbox_super";
@@ -39,6 +39,14 @@ export interface Env {
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_EXPECTED_HOSTNAME?: string;
+  LIFECYCLE_SERVICE_SECRET?: string;
+  LIFECYCLE_RECONCILE_SECRET?: string;
+  LIFECYCLE_REQUIRED_SERVICES?: string;
+  FILES_LIFECYCLE_URL?: string;
+  LAB_LIFECYCLE_URL?: string;
+  NOTIFICATIONS_LIFECYCLE_URL?: string;
+  MAIL_LIFECYCLE_URL?: string;
+  EXTRACT_LIFECYCLE_URL?: string;
   NODE_ENV?: string;
 }
 

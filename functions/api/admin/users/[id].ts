@@ -21,7 +21,7 @@ function cleanText(value: unknown, max = 180): string | null {
 }
 
 async function buildUserDetail(db: D1Database, user: UserRow) {
-  const [snapshot, mailAccount, usage, auditRows] = await Promise.all([
+  const [snapshot, mailAccount, usage, auditRows, lifecycleJob] = await Promise.all([
     loadAccessSnapshot(db, user),
     loadUserMailAccount(db, user.id),
     db
@@ -53,6 +53,23 @@ async function buildUserDetail(db: D1Database, user: UserRow) {
         details: string | null;
         created_at: string;
       }>(),
+    db
+      .prepare(
+        `SELECT id, status, service_results_json, created_at, updated_at, completed_at
+         FROM lifecycle_jobs
+         WHERE subject_user_id = ? AND action = 'delete'
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      )
+      .bind(user.id)
+      .first<{
+        id: string;
+        status: "running" | "completed" | "failed";
+        service_results_json: string;
+        created_at: string;
+        updated_at: string;
+        completed_at: string | null;
+      }>(),
   ]);
 
   return {
@@ -77,7 +94,26 @@ async function buildUserDetail(db: D1Database, user: UserRow) {
       details: row.details ? JSON.parse(row.details) : null,
       createdAt: row.created_at,
     })),
+    lifecycleJob: lifecycleJob
+      ? {
+          id: lifecycleJob.id,
+          status: lifecycleJob.status,
+          services: parseLifecycleServices(lifecycleJob.service_results_json),
+          createdAt: lifecycleJob.created_at,
+          updatedAt: lifecycleJob.updated_at,
+          completedAt: lifecycleJob.completed_at,
+        }
+      : null,
   };
+}
+
+function parseLifecycleServices(value: string): unknown[] {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request, params }) =>
@@ -115,12 +151,18 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
 
     if (Object.hasOwn(payload, "status")) {
       nextStatus = validateStatus(payload.status);
+      if (nextStatus === "deletion_pending" || nextStatus === "deleted") {
+        throw new ApiError("VALIDATION_ERROR", "Use the deletion endpoint for deletion lifecycle states.", 409);
+      }
       updates.push("status = ?", "global_status = ?");
       values.push(nextStatus, nextStatus);
     }
 
     if (Object.hasOwn(payload, "globalStatus")) {
       nextStatus = validateStatus(payload.globalStatus);
+      if (nextStatus === "deletion_pending" || nextStatus === "deleted") {
+        throw new ApiError("VALIDATION_ERROR", "Use the deletion endpoint for deletion lifecycle states.", 409);
+      }
       updates.push("global_status = ?");
       values.push(nextStatus);
     }
@@ -178,7 +220,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ env, request, params
 
     assertActorCanManageTarget({ actor, target, action: "delete" });
 
-    const deletedUser = await permanentlyDeleteUser({
+    const { deletedUser, lifecycleJob } = await permanentlyDeleteUser({
       env,
       request,
       actorUserId: actor.id,
@@ -186,5 +228,15 @@ export const onRequestDelete: PagesFunction<Env> = async ({ env, request, params
       action: "admin_delete",
     });
 
-    return jsonResponse(request, { ok: true, deletedUser });
+    return jsonResponse(
+      request,
+      {
+        ok: lifecycleJob.status === "completed",
+        pending: lifecycleJob.status !== "completed",
+        deletedUser,
+        lifecycleJobId: lifecycleJob.id,
+        lifecycleStatus: lifecycleJob.status,
+      },
+      { status: lifecycleJob.status === "completed" ? 200 : 202 },
+    );
   });

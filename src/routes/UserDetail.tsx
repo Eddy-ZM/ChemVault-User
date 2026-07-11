@@ -16,6 +16,16 @@ interface UserDetailResponse {
   pages: PageAccess[];
   usage: { aiExtractionCreditsUsed: number; storageUsedMb: number; apiRequestsThisMonth: number };
   auditLogs: AuditLog[];
+  lifecycleJob: LifecycleJob | null;
+}
+
+interface LifecycleJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  services: Array<{ service: string; status: "completed" | "failed"; error?: string }>;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
 }
 
 export function UserDetail() {
@@ -28,6 +38,7 @@ export function UserDetail() {
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [retryingLifecycle, setRetryingLifecycle] = useState(false);
 
   async function load(showToast = false) {
     if (!id) return;
@@ -54,15 +65,40 @@ export function UserDetail() {
     if (!detail) return;
     try {
       setDeleting(true);
-      await apiRequest<{ ok: true; deletedUser: { id: string; email: string } }>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
-      notify({ title: "User deleted", description: detail.user.email, tone: "warning" });
-      navigate("/admin/users", { replace: true });
+      const result = await apiRequest<{ ok: boolean; pending: boolean; lifecycleJobId: string; lifecycleStatus: string }>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
+      if (result.pending) {
+        notify({ title: "Deletion requires attention", description: "The account is blocked. Retry failed service deletions from this page.", tone: "warning" });
+        await load();
+      } else {
+        notify({ title: "User deleted", description: detail.user.email, tone: "warning" });
+        navigate("/admin/users", { replace: true });
+      }
     } catch (err) {
       const message = err instanceof ApiClientError ? err.message : "User delete failed.";
       notify({ title: "User delete failed", description: message, tone: "error" });
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
+    }
+  }
+
+  async function retryLifecycle() {
+    if (!detail?.lifecycleJob) return;
+    try {
+      setRetryingLifecycle(true);
+      const result = await apiRequest<{ ok: boolean; lifecycleStatus: string }>(`/api/admin/lifecycle/${detail.lifecycleJob.id}`, { method: "POST" });
+      if (result.ok) {
+        notify({ title: "Deletion completed", description: "All required services confirmed deletion.", tone: "success" });
+        navigate("/admin/users", { replace: true });
+      } else {
+        notify({ title: "Deletion still incomplete", description: "One or more services still need attention.", tone: "warning" });
+        await load();
+      }
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "Lifecycle retry failed.";
+      notify({ title: "Lifecycle retry failed", description: message, tone: "error" });
+    } finally {
+      setRetryingLifecycle(false);
     }
   }
 
@@ -130,6 +166,29 @@ export function UserDetail() {
           </dl>
         </div>
       </div>
+
+      {detail.lifecycleJob && detail.user.status === "deletion_pending" ? (
+        <div className="settings-panel border-amber-200 bg-amber-50">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Account deletion pending</h2>
+              <p className="mt-1 text-sm text-slate-600">Sign-in and service access are blocked while required services finish deletion.</p>
+            </div>
+            <button className="secondary-button" type="button" onClick={() => void retryLifecycle()} disabled={retryingLifecycle || detail.lifecycleJob.status !== "failed"}>
+              <RefreshCw className={`h-4 w-4 ${retryingLifecycle ? "animate-spin" : ""}`} />
+              Retry failed services
+            </button>
+          </div>
+          <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {detail.lifecycleJob.services.map((service) => (
+              <div key={service.service} className="rounded-lg border border-amber-200 bg-white p-3 text-sm">
+                <div className="flex items-center justify-between gap-2"><strong>{service.service}</strong><StatusBadge value={service.status} /></div>
+                {service.error ? <p className="mt-2 text-xs text-red-700">{service.error}</p> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-3">
         <SummaryList title="Direct permissions" items={detail.permissions.map((item) => `${item.key} (${item.effect})`)} />

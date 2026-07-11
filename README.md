@@ -10,6 +10,8 @@ ChemVault User Center 是 ChemVault 的统一账号与权限中心，面向 Chem
 
 ChemVault User Center 用于集中管理 ChemVault 用户身份。用户可在这里创建账号、登录 ChemVault 服务、维护个人资料、连接第三方登录方式、申请或绑定 ChemVault 邮箱，并查看自己可访问的 ChemVault 服务。
 
+User Center 也是账户数据生命周期的唯一入口：用户可请求跨服务数据导出或永久删除；删除只有在 Files、Lab、Notifications、Mail 和兼容 Extract 服务全部确认后才完成，失败任务保留状态供重试。
+
 管理员可通过后台统一管理用户、权限、服务访问范围、页面访问范围、邮箱账号和操作记录。
 
 ## 面向用户的功能

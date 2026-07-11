@@ -6,7 +6,7 @@ import { permanentlyDeleteUser } from "../../_shared/userDeletion";
 export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
     const { user } = await requireUser(env, request);
-    const deletedUser = await permanentlyDeleteUser({
+    const { deletedUser, lifecycleJob } = await permanentlyDeleteUser({
       env,
       request,
       target: user,
@@ -14,5 +14,18 @@ export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) =>
       action: "self_delete",
     });
 
-    return jsonResponse(request, { ok: true, deletedUser }, { headers: { "Set-Cookie": clearSessionCookie(env, request) } });
+    return jsonResponse(
+      request,
+      {
+        ok: lifecycleJob.status === "completed",
+        pending: lifecycleJob.status !== "completed",
+        deletedUser,
+        lifecycleJobId: lifecycleJob.id,
+        lifecycleStatus: lifecycleJob.status,
+      },
+      {
+        status: lifecycleJob.status === "completed" ? 200 : 202,
+        headers: { "Set-Cookie": clearSessionCookie(env, request) },
+      },
+    );
   });

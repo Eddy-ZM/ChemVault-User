@@ -11,11 +11,14 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
     const id = String(params.id || "");
     const payload = (await readJson(request)) as { status?: unknown };
     const status = validateStatus(payload.status);
+    if (status === "deletion_pending" || status === "deleted") {
+      throw new ApiError("VALIDATION_ERROR", "Use the deletion endpoint for deletion lifecycle states.", 409);
+    }
     const now = new Date().toISOString();
     const target = await getUserById(env.DB, id);
     if (!target) throw new ApiError("VALIDATION_ERROR", "User not found.", 404);
 
-    assertActorCanManageTarget({ actor, target, action: status === "deleted" ? "delete" : "update_status" });
+    assertActorCanManageTarget({ actor, target, action: "update_status" });
 
     await env.DB.prepare(`UPDATE users SET status = ?, global_status = ?, updated_at = ? WHERE id = ?`)
       .bind(status, status, now, id)

@@ -11,7 +11,7 @@ export function StatusBadge({ value }: { value: StatusValue }) {
       ? "status-active"
       : normalized === "disabled" || normalized === "deleted" || normalized === "deny"
         ? "status-danger"
-        : normalized === "suspended" || normalized === "admin" || normalized === "super_admin" || normalized === "owner"
+        : normalized === "suspended" || normalized === "deletion_pending" || normalized === "admin" || normalized === "super_admin" || normalized === "owner"
           ? "status-soon"
           : "status-idle";
 
