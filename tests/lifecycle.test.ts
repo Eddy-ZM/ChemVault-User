@@ -7,7 +7,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("distributed user lifecycle", () => {
   it("defaults to every data-bearing service and reports missing endpoints", async () => {
     const services = getLifecycleServiceConfigs({ LAB_LIFECYCLE_URL: "https://lab.example/internal/" } as Env);
-    expect(services.map((service) => service.name)).toEqual(["files", "lab", "notifications", "mail", "extract"]);
+    expect(services.map((service) => service.name)).toEqual(["billing", "files", "lab", "notifications", "mail", "extract"]);
     expect(services.find((service) => service.name === "lab")?.url).toBe("https://lab.example/internal");
   });
 

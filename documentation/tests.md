@@ -8,7 +8,7 @@
 | Permission evaluation | Role/user/service/page grants fail closed; Mail permissions excluded | permission tests | CI required |
 | Product handoff | Audience/expiry/access/return target verified | handoff and Lab routing tests | CI required |
 | Mail onboarding | Explicit profile capture and bind/apply decisions | route/component/API tests | CI required |
-| Distributed lifecycle | Required services, retry, terminal status, and all non-active states | lifecycle tests | CI required |
+| Distributed lifecycle | Billing plus all data services, retry, terminal status, and all non-active states | lifecycle tests | CI required |
 
 ## Proposed tests
 

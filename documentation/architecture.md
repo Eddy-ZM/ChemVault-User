@@ -7,7 +7,7 @@ ChemVault User is the suite identity, session, service-access, entitlement, hand
 - Authentication succeeds only when both account-status dimensions are active; all non-active states receive no effective permissions.
 - Service and page access are server-evaluated from role/user grants; clients cannot mint entitlements.
 - Product handoffs bind audience, expiry, identity, destination, and allowed return path.
-- Service-specific data stays in Files/Lab/Notifications/Mail/Extract; lifecycle uses dedicated service credentials and a required-service quorum.
+- Service-specific data stays in Billing/Files/Lab/Notifications/Mail/Extract; lifecycle uses dedicated service credentials and a required-service quorum. Billing must cancel future charges before the canonical identity can be removed.
 
 ## Known risks/assumptions
 

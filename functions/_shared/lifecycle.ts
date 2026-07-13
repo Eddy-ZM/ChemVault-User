@@ -2,7 +2,7 @@ import { ApiError } from "./responses";
 import type { Env, UserRow } from "./types";
 
 export type LifecycleAction = "export" | "delete";
-export type LifecycleServiceName = "files" | "lab" | "notifications" | "mail" | "extract";
+export type LifecycleServiceName = "billing" | "files" | "lab" | "notifications" | "mail" | "extract";
 
 export interface LifecycleServiceConfig {
   name: LifecycleServiceName;
@@ -24,10 +24,11 @@ export interface LifecycleRun {
   results: LifecycleServiceResult[];
 }
 
-const allServices: LifecycleServiceName[] = ["files", "lab", "notifications", "mail", "extract"];
+const allServices: LifecycleServiceName[] = ["billing", "files", "lab", "notifications", "mail", "extract"];
 
 export function getLifecycleServiceConfigs(env: Env): LifecycleServiceConfig[] {
   const configured: Record<LifecycleServiceName, string | undefined> = {
+    billing: env.BILLING_LIFECYCLE_URL,
     files: env.FILES_LIFECYCLE_URL,
     lab: env.LAB_LIFECYCLE_URL,
     notifications: env.NOTIFICATIONS_LIFECYCLE_URL,

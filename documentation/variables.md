@@ -7,7 +7,7 @@
 | Mail sync/SSO credentials | User ↔ Mail | Shared server secrets, distinct | 90 days/incident | Mail onboarding/sync unavailable |
 | `LIFECYCLE_SERVICE_SECRET` | Inbound service lifecycle authority | Server secret | 90 days/incident | Service request denied |
 | `LIFECYCLE_RECONCILE_SECRET` | Scheduled reconciliation | Pages/GitHub secret, distinct | 90 days/incident | Failed jobs stop retrying |
-| Service lifecycle URLs/credentials | Outbound Files/Lab/Notif/Mail/Extract calls | Server config/secrets | Service migration/incident | Job remains failed/retryable |
+| Service lifecycle URLs/credentials | Outbound Billing/Files/Lab/Notif/Mail/Extract calls | Server config/secrets | Service migration/incident | Job remains failed/retryable; Billing failure blocks final deletion |
 | `LIFECYCLE_REQUIRED_SERVICES` | Deletion quorum | Server variable | Product boundary change | Wrong list can block or falsely complete deletion |
 | D1 binding | Users/grants/audit/jobs | Cloudflare binding | Resource migration | Identity control plane unavailable |
 | `BILLING_SERVICE_SECRET` | Main billing API → User Center canonical identity lookup | Cloudflare Pages secret only; shared with main and billing consumers | 90 days/incident | Missing or mismatched values deny internal identity resolution |
