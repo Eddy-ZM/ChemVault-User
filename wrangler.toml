@@ -54,3 +54,5 @@ EXTRACT_LIFECYCLE_URL = "https://api.chemvault.science/internal/lifecycle"
 # wrangler pages secret put GITHUB_CLIENT_SECRET --project-name chemvault-user
 # wrangler pages secret put TURNSTILE_SECRET_KEY --project-name chemvault-user
 # wrangler pages secret put LIFECYCLE_SERVICE_SECRET --project-name chemvault-user
+# wrangler pages secret put BILLING_SERVICE_SECRET --project-name chemvault-user
+# The value must match the main billing API and consuming services; never store it in vars.

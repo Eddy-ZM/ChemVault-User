@@ -10,5 +10,6 @@
 | Service lifecycle URLs/credentials | Outbound Files/Lab/Notif/Mail/Extract calls | Server config/secrets | Service migration/incident | Job remains failed/retryable |
 | `LIFECYCLE_REQUIRED_SERVICES` | Deletion quorum | Server variable | Product boundary change | Wrong list can block or falsely complete deletion |
 | D1 binding | Users/grants/audit/jobs | Cloudflare binding | Resource migration | Identity control plane unavailable |
+| `BILLING_SERVICE_SECRET` | Main billing API → User Center canonical identity lookup | Cloudflare Pages secret only; shared with main and billing consumers | 90 days/incident | Missing or mismatched values deny internal identity resolution |
 
 No secret may be reused across JWT, OAuth, Mail, lifecycle, or reconciliation. Go-live requires provider callbacks, active-state regression, service registry/grants, required-service quorum, distributed canary, and PII-minimized tombstone review.

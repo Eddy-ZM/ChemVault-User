@@ -8,3 +8,6 @@
 | Permission/admin change | Authorized admin | Recompute role/user grants, persist audit event, revoke stale access where required | Non-admin/self-escalation denied; Mail roles remain Mail-owned |
 | Account delete | User/admin according to policy | Mark deletion-pending, revoke sessions, create per-service jobs, call required services, remove local user last | Partial failure remains visible/retryable; no false-complete state |
 | Reconciliation | Scheduled workflow with secret | Retry bounded failed jobs older than five minutes and persist result | Missing secret denied; concurrent run disabled; terminal jobs not replayed |
+## Internal billing identity resolution
+
+The main billing service authenticates with `BILLING_SERVICE_SECRET`, submits a normalized email, and receives only the matching active canonical identity. Invalid credentials, malformed email, missing users, and inactive global or local status fail closed.

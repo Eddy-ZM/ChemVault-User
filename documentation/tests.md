@@ -23,3 +23,7 @@
 - Provider-console callbacks and distributed service secrets cannot be proven by local CI.
 - PII minimization of production audit/tombstone data requires periodic data review.
 - CI gates full Vitest and production build; scheduled reconciliation requires Actions history/canary evidence.
+
+## Billing identity
+
+Billing identity tests cover the dedicated service secret, email normalization, minimal canonical response, and rejection of invalid, missing, disabled, or globally inactive users.

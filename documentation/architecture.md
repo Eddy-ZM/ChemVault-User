@@ -24,3 +24,7 @@ Scheduled lifecycle reconciliation is documented in `cron.md`. There is no email
 - [Variables](variables.md)
 - [Tests](tests.md)
 - [Scheduled lifecycle work](cron.md)
+
+## Billing identity boundary
+
+User Center is the canonical identity authority for subscription enforcement. Its service-secret-protected billing resolver accepts a normalized email and returns only the active user's canonical `id` and `email`; plans, payments, and usage remain owned by the main billing service and consuming products.
