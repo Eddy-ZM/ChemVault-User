@@ -28,6 +28,7 @@ import { MailSync } from "./routes/MailSync";
 import { ToastProvider } from "./components/Toast";
 import { GlobalInteractions } from "./components/GlobalInteractions";
 import "./styles/globals.css";
+import "./styles/exhibition-theme.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
