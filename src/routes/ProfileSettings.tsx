@@ -77,7 +77,7 @@ export function ProfileSettings() {
             <UserAvatar user={{ ...user, avatarUrl: avatarPreview }} size="lg" />
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Avatar</h2>
-              <p className="text-sm text-slate-500">Images are previewed locally and stored as avatarUrl until R2 upload is enabled.</p>
+              <p className="text-sm text-slate-500">Preview your profile image before saving it to your ChemVault account.</p>
             </div>
           </div>
           <label className="secondary-button cursor-pointer">

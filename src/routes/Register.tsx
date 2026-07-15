@@ -20,6 +20,19 @@ interface RegisterOptions {
   };
 }
 
+const defaultRegisterOptions: RegisterOptions = {
+  turnstile: { siteKey: null, required: false, action: "register_email" },
+};
+
+function normalizeRegisterOptions(options: RegisterOptions | null | undefined): RegisterOptions {
+  return {
+    turnstile: {
+      ...defaultRegisterOptions.turnstile,
+      ...(options?.turnstile ?? {}),
+    },
+  };
+}
+
 export function Register() {
   const { register, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -31,9 +44,7 @@ export function Register() {
   const [agreementOpen, setAgreementOpen] = useState<AgreementKind | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
-  const [registerOptions, setRegisterOptions] = useState<RegisterOptions>({
-    turnstile: { siteKey: null, required: false, action: "register_email" },
-  });
+  const [registerOptions, setRegisterOptions] = useState<RegisterOptions>(defaultRegisterOptions);
 
   useEffect(() => {
     if (!loading && user) {
@@ -43,7 +54,7 @@ export function Register() {
 
   useEffect(() => {
     void apiRequest<RegisterOptions>("/api/auth/register-options")
-      .then(setRegisterOptions)
+      .then((options) => setRegisterOptions(normalizeRegisterOptions(options)))
       .catch(() => {
         setRegisterOptions({ turnstile: { siteKey: null, required: true, action: "register_email" } });
       });

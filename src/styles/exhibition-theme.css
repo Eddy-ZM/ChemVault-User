@@ -244,8 +244,55 @@ body {
   background: #07111f;
 }
 
+.primary-button,
+.secondary-button,
+.icon-button,
+.auth-card a,
+.user-system-footer a,
+button,
+input,
+select,
+textarea {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 @media (max-width: 1023px) {
   .sidebar {
     box-shadow: 20px 0 50px rgba(0, 0, 0, 0.3);
   }
+}
+
+.primary-button,
+.secondary-button,
+.icon-button,
+.auth-card a,
+.user-system-footer a,
+button,
+[role="button"],
+select,
+textarea,
+input:not([type="checkbox"]):not([type="radio"]) {
+  min-width: 46px !important;
+  min-height: 46px !important;
+}
+
+.auth-card :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 46px !important;
+  height: auto !important;
+  padding-block: 12px !important;
+}
+
+.auth-card a,
+.user-system-footer a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.checkbox-label,
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  min-height: 46px !important;
+  display: flex;
+  align-items: center;
 }

@@ -76,7 +76,7 @@ export function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-3">
         <StatCard
           icon={FlaskConical}
-          label="AI extraction credits used"
+          label="AI credits"
           value={`${usageSummary?.aiExtractionCreditsUsed ?? 0}`}
           detail={limits ? `Limit ${limits.aiCredits.toLocaleString()} credits this month` : "Loading usage limit"}
         />
@@ -88,7 +88,7 @@ export function Dashboard() {
         />
         <StatCard
           icon={Server}
-          label="API requests this month"
+          label="API usage"
           value={`${usageSummary?.apiRequestsThisMonth ?? 0}`}
           detail={limits ? `Limit ${limits.apiRequests.toLocaleString()} requests` : "Loading API limit"}
         />

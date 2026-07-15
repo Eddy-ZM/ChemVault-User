@@ -76,8 +76,8 @@ export function PageAccessEditor() {
     <section className="page-section">
       <div className="section-heading">
         <div>
-          <p className="label">Page Access</p>
-          <h1>Cross-system page access</h1>
+          <p className="label">Access</p>
+          <h1>Product page access</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to={`/admin/users/${id}`} className="secondary-button">Back to user</Link>
@@ -101,7 +101,7 @@ export function PageAccessEditor() {
                   <h2 className="font-semibold text-slate-950">{page.name}</h2>
                   <StatusBadge value={draft[page.key] || "disabled"} />
                 </div>
-                <p className="font-mono text-xs text-slate-500">{page.path || page.key}</p>
+                <p className="text-xs text-slate-500">Controls whether this user can open {page.name}.</p>
               </div>
               <div className="grid grid-cols-3 rounded-lg border border-slate-200 bg-slate-50 p-1">
                 {statuses.map((status) => (
