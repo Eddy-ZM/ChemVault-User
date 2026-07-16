@@ -29,10 +29,15 @@ export function OAuthSignInButton({
   disabledReason?: string;
 }) {
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
   const meta = providerMeta[provider];
 
   function startOAuth() {
-    if (disabledReason) return;
+    if (disabledReason) {
+      setNotice(disabledReason);
+      return;
+    }
+    setNotice("");
     setBusy(true);
     window.location.assign(oauthStartUrl(provider, returnTo, mode));
   }
@@ -43,7 +48,7 @@ export function OAuthSignInButton({
         className={`oauth-signin-button ${meta.className}`}
         type="button"
         onClick={startOAuth}
-        disabled={busy || Boolean(disabledReason)}
+        disabled={busy}
         aria-label={label || `Continue with ${meta.label}`}
         title={disabledReason || undefined}
       >
@@ -52,7 +57,7 @@ export function OAuthSignInButton({
           {busy ? <ButtonSpinner label={`Opening ${meta.label}...`} /> : label || `Continue with ${meta.label}`}
         </span>
       </button>
-      {disabledReason ? <p className="oauth-unavailable-note">{disabledReason}</p> : null}
+      {disabledReason ? <p className="oauth-unavailable-note">{notice || disabledReason}</p> : null}
     </div>
   );
 }

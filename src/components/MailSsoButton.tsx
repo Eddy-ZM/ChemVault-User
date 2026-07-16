@@ -73,7 +73,10 @@ export function MailSsoButton({ returnTo = "/dashboard" }: { returnTo?: string }
   const handleClick = useCallback(() => {
     setError("");
 
-    if (!options) return;
+    if (!options) {
+      setError("ChemVault Mail SSO options are still loading. Try again in a moment.");
+      return;
+    }
     if (!options.mailSsoConfigured) {
       setError("ChemVault Mail SSO URL is not configured yet.");
       return;
@@ -99,11 +102,9 @@ export function MailSsoButton({ returnTo = "/dashboard" }: { returnTo?: string }
     widgetRef.current?.execute();
   }, [options, ready, returnTo]);
 
-  const disabled = busy || !options;
-
   return (
     <div className="mail-sso-control">
-      <button className="secondary-button w-full justify-center" disabled={disabled} type="button" onClick={handleClick}>
+      <button className="secondary-button w-full justify-center" disabled={busy} type="button" onClick={handleClick}>
         {busy ? (
           <ButtonSpinner label="Checking..." />
         ) : (

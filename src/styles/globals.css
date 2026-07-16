@@ -589,19 +589,19 @@ textarea {
   }
 
   .checkbox-label {
-    @apply flex items-center gap-3 text-sm font-medium text-slate-600;
+    @apply flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-slate-600;
   }
 
   .checkbox-label input {
-    @apply h-4 min-h-0 w-4 rounded border-slate-300 p-0;
+    @apply h-[18px] min-h-0 w-[18px] rounded border-slate-300 p-0;
   }
 
   .checkbox-row {
-    @apply flex min-h-6 items-center gap-2 text-sm font-medium text-slate-600;
+    @apply flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-slate-600;
   }
 
   .checkbox-row input {
-    @apply h-4 min-h-0 w-4 rounded border-slate-300 p-0;
+    @apply h-[18px] min-h-0 w-[18px] rounded border-slate-300 p-0;
   }
 
   .alert-error {
