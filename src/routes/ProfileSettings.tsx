@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { RotateCcw, Save, Upload } from "lucide-react";
 import { UserAvatar } from "../components/UserAvatar";
 import { ApiClientError, apiRequest } from "../lib/api";
@@ -6,6 +6,7 @@ import { useAuth } from "../lib/auth";
 import type { User } from "../lib/types";
 import { useToast } from "../components/Toast";
 import { ButtonSpinner } from "../components/UiPrimitives";
+import { ConfirmDialog } from "../components/Modal";
 
 export function ProfileSettings() {
   const { notify } = useToast();
@@ -14,6 +15,8 @@ export function ProfileSettings() {
   const [error, setError] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmClearAvatar, setConfirmClearAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setAvatarPreview(user?.avatarUrl || null);
@@ -27,6 +30,12 @@ export function ProfileSettings() {
     const reader = new FileReader();
     reader.onload = () => setAvatarPreview(String(reader.result));
     reader.readAsDataURL(file);
+  }
+
+  function clearAvatarPreview() {
+    setAvatarPreview(null);
+    setConfirmClearAvatar(false);
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -83,9 +92,9 @@ export function ProfileSettings() {
           <label className="secondary-button cursor-pointer">
             <Upload className="h-4 w-4" />
             Upload
-            <input className="sr-only" accept="image/*" type="file" onChange={handleAvatar} />
+            <input ref={avatarInputRef} className="sr-only" accept="image/*" type="file" onChange={handleAvatar} />
           </label>
-          <button className="secondary-button" type="button" onClick={() => setAvatarPreview(null)}>
+          <button className="secondary-button" type="button" onClick={() => setConfirmClearAvatar(true)} disabled={!avatarPreview}>
             <RotateCcw className="h-4 w-4" />
             Clear
           </button>
@@ -130,6 +139,15 @@ export function ProfileSettings() {
           )}
         </button>
       </form>
+      <ConfirmDialog
+        open={confirmClearAvatar}
+        title="Clear profile avatar?"
+        description="This will remove the current avatar preview. The change is applied to your account after you save the profile."
+        confirmLabel="Clear avatar"
+        tone="danger"
+        onCancel={() => setConfirmClearAvatar(false)}
+        onConfirm={clearAvatarPreview}
+      />
     </section>
   );
 }
