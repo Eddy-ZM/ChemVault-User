@@ -5,6 +5,7 @@ import {
   canAccessService,
   evaluateAccessCheck,
   evaluatePermission,
+  loadEffectivePermissionKeys,
   makeAuditDetails,
 } from "../functions/_shared/permissions";
 import { defaultRolePermissions, permissionSeeds } from "../functions/_shared/permissionCatalog";
@@ -254,7 +255,9 @@ describe("permission evaluation", () => {
       key: permissionKey,
       category: "service",
     });
-    expect(defaultRolePermissions.user).not.toContain(permissionKey);
+    for (const permissions of Object.values(defaultRolePermissions)) {
+      expect(permissions).not.toContain(permissionKey);
+    }
     expect(canAccessService(baseUser, snapshot(), "uom-su-mail-system")).toEqual({
       allowed: false,
       reason: "missing_permission",
@@ -274,4 +277,126 @@ describe("permission evaluation", () => {
       ),
     ).toEqual({ allowed: false, reason: "denied_by_user_permission" });
   });
+
+  it("keeps UoM Mail System access explicit-only for non-bootstrap owner and super-admin users", () => {
+    const permissionKey = "service:uom-su-mail-system:access";
+    const roleAllow = snapshot({ rolePermissions: [{ key: permissionKey, effect: "allow" }] });
+
+    for (const systemRole of ["owner", "super_admin"] as const) {
+      const privilegedUser = { ...baseUser, email: `${systemRole}@example.com`, system_role: systemRole };
+      expect(evaluatePermission(privilegedUser, snapshot(), permissionKey)).toEqual({
+        allowed: false,
+        reason: "missing_permission",
+      });
+      expect(evaluatePermission(privilegedUser, roleAllow, permissionKey)).toEqual({
+        allowed: false,
+        reason: "missing_permission",
+      });
+      expect(
+        canAccessService(
+          privilegedUser,
+          snapshot({ services: [{ key: "uom-su-mail-system", status: "active" }] }),
+          "uom-su-mail-system",
+        ),
+      ).toEqual({ allowed: false, reason: "missing_permission" });
+      expect(
+        evaluatePermission(
+          privilegedUser,
+          snapshot({
+            rolePermissions: [{ key: permissionKey, effect: "deny" }],
+            userPermissions: [{ key: permissionKey, effect: "allow" }],
+          }),
+          permissionKey,
+        ),
+      ).toEqual({ allowed: true, reason: "allowed_by_user_permission" });
+    }
+  });
+
+  it("bootstraps only Ziwen for UoM Mail System access and lets an explicit deny win", () => {
+    const permissionKey = "service:uom-su-mail-system:access";
+    const ziwen = { ...baseUser, email: "  Ziwen.Mu@ChemVault.Science ", system_role: "user" as const };
+
+    expect(evaluatePermission(ziwen, snapshot(), permissionKey)).toEqual({
+      allowed: true,
+      reason: "allowed_by_bootstrap_identity",
+    });
+    expect(
+      evaluatePermission(
+        ziwen,
+        snapshot({ rolePermissions: [{ key: permissionKey, effect: "deny" }] }),
+        permissionKey,
+      ),
+    ).toEqual({ allowed: true, reason: "allowed_by_bootstrap_identity" });
+    expect(
+      evaluatePermission(
+        ziwen,
+        snapshot({ userPermissions: [{ key: permissionKey, effect: "deny" }] }),
+        permissionKey,
+      ),
+    ).toEqual({ allowed: false, reason: "denied_by_user_permission" });
+  });
+
+  it("returns an effective UoM permission only for bootstrap or explicit user access", async () => {
+    const permissionKey = "service:uom-su-mail-system:access";
+    const allDefinitions = [permissionKey, "admin:system_settings:edit"];
+
+    for (const systemRole of ["owner", "super_admin"] as const) {
+      const effective = await loadEffectivePermissionKeys(
+        permissionDb({ definitions: allDefinitions }),
+        { ...baseUser, email: `${systemRole}@example.com`, system_role: systemRole },
+      );
+      expect(effective).toContain("admin:system_settings:edit");
+      expect(effective).not.toContain(permissionKey);
+
+      const explicitlyAllowed = await loadEffectivePermissionKeys(
+        permissionDb({
+          definitions: allDefinitions,
+          userPermissions: [{ key: permissionKey, effect: "allow" }],
+        }),
+        { ...baseUser, email: `${systemRole}@example.com`, system_role: systemRole },
+      );
+      expect(explicitlyAllowed).toContain(permissionKey);
+    }
+
+    await expect(
+      loadEffectivePermissionKeys(permissionDb({ definitions: allDefinitions }), {
+        ...baseUser,
+        email: "ziwen.mu@chemvault.science",
+      }),
+    ).resolves.toContain(permissionKey);
+    await expect(
+      loadEffectivePermissionKeys(
+        permissionDb({
+          definitions: allDefinitions,
+          userPermissions: [{ key: permissionKey, effect: "deny" }],
+        }),
+        { ...baseUser, email: "ziwen.mu@chemvault.science" },
+      ),
+    ).resolves.not.toContain(permissionKey);
+  });
 });
+
+function permissionDb(input: {
+  definitions?: string[];
+  rolePermissions?: AccessSnapshot["rolePermissions"];
+  userPermissions?: AccessSnapshot["userPermissions"];
+}): D1Database {
+  return {
+    prepare(query: string) {
+      const statement = {
+        bind() {
+          return statement;
+        },
+        async all() {
+          if (query.includes("FROM permissions ORDER BY key")) {
+            return { results: (input.definitions || []).map((key) => ({ key })) };
+          }
+          if (query.includes("FROM role_permissions")) return { results: input.rolePermissions || [] };
+          if (query.includes("FROM user_permissions")) return { results: input.userPermissions || [] };
+          return { results: [] };
+        },
+      };
+      return statement;
+    },
+  } as unknown as D1Database;
+}

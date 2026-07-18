@@ -138,6 +138,38 @@ describe("User System handoff", () => {
     expect(body.access).toEqual({ allowed: false, reason: "denied_by_user_permission" });
   });
 
+  it("applies explicit-only and Ziwen bootstrap rules through the live UoM verification endpoint", async () => {
+    const owner = { ...user, email: "owner@example.com", system_role: "owner" as const };
+    const ownerEnv = {
+      JWT_SECRET: "test-secret",
+      DB: createHandoffDb(null, owner),
+    } as unknown as Env;
+    const ownerToken = await createUserSystemHandoffToken(ownerEnv, owner, uomMailSystemAudience);
+    const ownerResponse = await verifyHandoff(createEventContext(ownerEnv, new Request(
+      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    )));
+    const ownerBody = await ownerResponse.json() as { access: { allowed: boolean; reason: string }; user: { permissions: string[] } };
+
+    expect(ownerBody.access).toEqual({ allowed: false, reason: "missing_permission" });
+    expect(ownerBody.user.permissions).not.toContain(uomMailSystemPermission);
+
+    const ziwen = { ...user, email: "ziwen.mu@chemvault.science" };
+    const ziwenEnv = {
+      JWT_SECRET: "test-secret",
+      DB: createHandoffDb(null, ziwen),
+    } as unknown as Env;
+    const ziwenToken = await createUserSystemHandoffToken(ziwenEnv, ziwen, uomMailSystemAudience);
+    const ziwenResponse = await verifyHandoff(createEventContext(ziwenEnv, new Request(
+      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
+      { headers: { authorization: `Bearer ${ziwenToken}` } },
+    )));
+    const ziwenBody = await ziwenResponse.json() as { access: { allowed: boolean; reason: string }; user: { permissions: string[] } };
+
+    expect(ziwenBody.access).toEqual({ allowed: true, reason: "allowed_by_bootstrap_identity" });
+    expect(ziwenBody.user.permissions).toContain(uomMailSystemPermission);
+  });
+
   it("keeps the Lab verification response compatible when no permission is requested", async () => {
     const env = {
       JWT_SECRET: "test-secret",
@@ -169,7 +201,7 @@ function createEventContext(env: Env, request: Request) {
   } as unknown as EventContext<Env, string, Record<string, unknown>>;
 }
 
-function createHandoffDb(effect: "allow" | "deny"): D1Database {
+function createHandoffDb(effect: "allow" | "deny" | null, dbUser: UserRow = user): D1Database {
   return {
     prepare(query: string) {
       const statement = {
@@ -177,13 +209,13 @@ function createHandoffDb(effect: "allow" | "deny"): D1Database {
           return statement;
         },
         async first() {
-          if (query.includes("FROM users")) return user;
+          if (query.includes("FROM users")) return dbUser;
           if (query.includes("FROM mail_accounts")) return null;
           return null;
         },
         async all() {
           if (query.includes("FROM user_permissions")) {
-            return { results: [{ key: uomMailSystemPermission, effect }] };
+            return { results: effect ? [{ key: uomMailSystemPermission, effect }] : [] };
           }
           return { results: [] };
         },

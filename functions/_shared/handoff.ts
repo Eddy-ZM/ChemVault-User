@@ -1,5 +1,6 @@
 import { ApiError } from "./responses";
 import type { Env, UserRow } from "./types";
+export { uomMailSystemPermission } from "./uomMailAccess";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -7,7 +8,6 @@ const labHandoffLifetimeSeconds = 5 * 60;
 const uomMailSystemHandoffLifetimeSeconds = 8 * 60 * 60;
 
 export const uomMailSystemAudience = "uom-su-mail-system" as const;
-export const uomMailSystemPermission = "service:uom-su-mail-system:access" as const;
 export type UserSystemHandoffAudience = "chemvault-lab" | typeof uomMailSystemAudience;
 
 export interface UserSystemHandoffPayload {

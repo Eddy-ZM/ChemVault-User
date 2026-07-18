@@ -15,6 +15,7 @@ import { ButtonSpinner, LoadingBlock, SaveBar } from "../components/UiPrimitives
 import { useToast } from "../components/Toast";
 
 type LocalEffect = PermissionEffect | "inherit";
+const uomMailSystemPermission = "service:uom-su-mail-system:access";
 
 interface PermissionState {
   permissionAllowed: boolean;
@@ -31,6 +32,7 @@ interface PermissionEditorResponse {
   permissions: PermissionGrant[];
   rolePermissions: PermissionGrant[];
   effectivePermissions: string[];
+  bootstrapPermissions: string[];
   definitions: PermissionDefinition[];
 }
 
@@ -127,7 +129,14 @@ export function UserPermissionEditor() {
 
   const effective = new Set(data.effectivePermissions);
   const roleEffects = new Map(data.rolePermissions.map((grant) => [grant.key, grant.effect]));
-  const previewEffective = getPreviewEffectivePermissions(data.definitions, data.systemRole, data.rolePermissions, draft, effective);
+  const previewEffective = getPreviewEffectivePermissions(
+    data.definitions,
+    data.systemRole,
+    data.rolePermissions,
+    draft,
+    effective,
+    new Set(data.bootstrapPermissions || []),
+  );
   const states = new Map(data.definitions.map((definition) => [definition.key, getAccessState(definition, previewEffective)]));
   const directAllows = Object.values(draft).filter((effect) => effect === "allow").length;
   const directDenies = Object.values(draft).filter((effect) => effect === "deny").length;
@@ -350,30 +359,44 @@ function getPreviewEffectivePermissions(
   rolePermissions: PermissionGrant[],
   draft: Record<string, LocalEffect>,
   savedEffective: Set<string>,
+  bootstrapPermissions: Set<string>,
 ): Set<string> {
-  if (systemRole === "owner" || systemRole === "super_admin") {
-    return new Set(definitions.map((definition) => definition.key));
-  }
+  const isGlobalSuperUser = systemRole === "owner" || systemRole === "super_admin";
+  const preview = isGlobalSuperUser
+    ? new Set(definitions.map((definition) => definition.key).filter((key) => key !== uomMailSystemPermission))
+    : new Set<string>();
 
-  const preview = new Set<string>();
-  for (const grant of rolePermissions) {
-    if (grant.effect === "deny") {
-      preview.delete(grant.key);
-      continue;
+  if (!isGlobalSuperUser) {
+    for (const grant of rolePermissions) {
+      if (grant.key === uomMailSystemPermission) continue;
+      if (grant.effect === "deny") {
+        preview.delete(grant.key);
+        continue;
+      }
+      if (grant.effect === "allow") preview.add(grant.key);
     }
-    if (grant.effect === "allow") preview.add(grant.key);
-  }
 
-  if (!rolePermissions.length) {
-    for (const key of savedEffective) preview.add(key);
+    if (!rolePermissions.length) {
+      for (const key of savedEffective) {
+        if (key !== uomMailSystemPermission) preview.add(key);
+      }
+    }
   }
 
   for (const [key, effect] of Object.entries(draft)) {
+    if (key === uomMailSystemPermission) continue;
     if (effect === "deny") {
       preview.delete(key);
       continue;
     }
     if (effect === "allow") preview.add(key);
+  }
+
+  const uomEffect = draft[uomMailSystemPermission] || "inherit";
+  if (uomEffect === "allow" || (uomEffect === "inherit" && bootstrapPermissions.has(uomMailSystemPermission))) {
+    preview.add(uomMailSystemPermission);
+  } else {
+    preview.delete(uomMailSystemPermission);
   }
 
   return preview;
