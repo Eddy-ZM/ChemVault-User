@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Ban, Check, CircleDashed, RotateCcw, Save, Search } from "lucide-react";
+import { Ban, Check, RotateCcw, Save, Search } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../lib/api";
 import {
@@ -14,8 +14,7 @@ import type { PermissionDefinition, PermissionEffect, PermissionGrant } from "..
 import { ButtonSpinner, LoadingBlock, SaveBar } from "../components/UiPrimitives";
 import { useToast } from "../components/Toast";
 
-type LocalEffect = PermissionEffect | "inherit";
-const uomMailSystemPermission = "service:uom-su-mail-system:access";
+type LocalEffect = PermissionEffect;
 
 interface PermissionState {
   permissionAllowed: boolean;
@@ -36,6 +35,8 @@ interface PermissionEditorResponse {
   definitions: PermissionDefinition[];
 }
 
+type PermissionEditorPatchResponse = Omit<PermissionEditorResponse, "definitions" | "systemRole">;
+
 export function UserPermissionEditor() {
   const { id } = useParams();
   const { notify } = useToast();
@@ -51,7 +52,7 @@ export function UserPermissionEditor() {
     if (!id) return;
     try {
       const body = await apiRequest<PermissionEditorResponse>(`/api/admin/users/${id}/permissions`);
-      const nextDraft = Object.fromEntries(body.permissions.map((grant) => [grant.key, grant.effect as LocalEffect]));
+      const nextDraft = buildTwoStateDraft(body);
       setData(body);
       setDraft(nextDraft);
       setSavedDraft(nextDraft);
@@ -80,18 +81,20 @@ export function UserPermissionEditor() {
   }, [data, query]);
 
   async function save() {
-    if (!id) return;
+    if (!id || !data) return;
     setSaving(true);
-    const permissions = Object.entries(draft)
-      .filter(([, effect]) => effect === "allow" || effect === "deny")
-      .map(([key, effect]) => ({ key, effect }));
+    const permissions = data.definitions.map((definition) => ({
+      key: definition.key,
+      effect: (draft[definition.key] === "allow" ? "allow" : "deny") as PermissionEffect,
+    }));
     try {
-      const body = await apiRequest<PermissionEditorResponse>(`/api/admin/users/${id}/permissions`, {
+      const body = await apiRequest<PermissionEditorPatchResponse>(`/api/admin/users/${id}/permissions`, {
         method: "PATCH",
         body: JSON.stringify({ permissions }),
       });
-      const nextDraft = Object.fromEntries(body.permissions.map((grant) => [grant.key, grant.effect as LocalEffect]));
-      setData((current) => current ? { ...current, ...body } : body);
+      const nextData = { ...data, ...body };
+      const nextDraft = buildTwoStateDraft(nextData);
+      setData(nextData);
       setDraft(nextDraft);
       setSavedDraft(nextDraft);
       setMessage("Permissions saved.");
@@ -127,16 +130,7 @@ export function UserPermissionEditor() {
   if (error) return <section className="page-section"><div className="alert-error">{error}</div></section>;
   if (!data) return <section className="page-section"><LoadingBlock label="Loading permissions..." /></section>;
 
-  const effective = new Set(data.effectivePermissions);
-  const roleEffects = new Map(data.rolePermissions.map((grant) => [grant.key, grant.effect]));
-  const previewEffective = getPreviewEffectivePermissions(
-    data.definitions,
-    data.systemRole,
-    data.rolePermissions,
-    draft,
-    effective,
-    new Set(data.bootstrapPermissions || []),
-  );
+  const previewEffective = getPreviewEffectivePermissions(draft);
   const states = new Map(data.definitions.map((definition) => [definition.key, getAccessState(definition, previewEffective)]));
   const directAllows = Object.values(draft).filter((effect) => effect === "allow").length;
   const directDenies = Object.values(draft).filter((effect) => effect === "deny").length;
@@ -145,7 +139,7 @@ export function UserPermissionEditor() {
     (state) => state.permissionAllowed && !state.dependencyAllowed,
   ).length;
   const dirtyCount = new Set([...Object.keys(draft), ...Object.keys(savedDraft)]).size
-    ? [...new Set([...Object.keys(draft), ...Object.keys(savedDraft)])].filter((key) => (draft[key] || "inherit") !== (savedDraft[key] || "inherit")).length
+    ? [...new Set([...Object.keys(draft), ...Object.keys(savedDraft)])].filter((key) => draft[key] !== savedDraft[key]).length
     : 0;
 
   return (
@@ -155,7 +149,7 @@ export function UserPermissionEditor() {
           <p className="label">User Permission Editor</p>
           <h1>Direct permissions</h1>
           <p className="text-sm text-slate-500">
-            User System defaults are used unless you explicitly allow or deny a permission here.
+            Set each permission to Allow or Deny. Mail runtime permissions follow Mail role assignment.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -218,7 +212,7 @@ export function UserPermissionEditor() {
               <p className="mt-1 text-sm text-slate-500">{getCategoryDisplay(category).description}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(["inherit", "allow", "deny"] as LocalEffect[]).map((effect) => (
+              {(["allow", "deny"] as LocalEffect[]).map((effect) => (
                 <button key={effect} className="secondary-button h-8 px-3 text-xs" type="button" onClick={() => setCategoryEffect(category, effect)}>
                   {categoryActionLabel(effect)}
                 </button>
@@ -227,10 +221,9 @@ export function UserPermissionEditor() {
           </div>
           <div className="mt-4 grid gap-3">
             {permissions.map((permission) => {
-              const effect = draft[permission.key] || "inherit";
+              const effect = draft[permission.key] || "deny";
               const display = getPermissionDisplay(permission);
               const state = states.get(permission.key) || getAccessState(permission, previewEffective);
-              const sourceLabel = getSourceLabel(effect, roleEffects.get(permission.key));
               const canAllowDependency = state.dependency && data.definitions.some((definition) => definition.key === state.dependency?.permissionKey);
               return (
                 <div
@@ -246,7 +239,6 @@ export function UserPermissionEditor() {
                         <span className={`permission-outcome permission-outcome-${state.tone}`}>
                           {state.label}
                         </span>
-                        <span className="badge-muted">{sourceLabel}</span>
                       </div>
                       <p>{display.summary}</p>
                       {state.dependency ? (
@@ -261,7 +253,7 @@ export function UserPermissionEditor() {
                               type="button"
                               onClick={() => setEffect(state.dependency!.permissionKey, "allow")}
                             >
-                              Allow required service
+                              Set required service to Allow
                             </button>
                           ) : null}
                         </div>
@@ -273,7 +265,7 @@ export function UserPermissionEditor() {
                       <div className="permission-technical-key">Technical key: {permission.key}</div>
                     </div>
                     <div className="segmented">
-                      {(["inherit", "allow", "deny"] as LocalEffect[]).map((option) => (
+                      {(["allow", "deny"] as LocalEffect[]).map((option) => (
                         <button
                           key={option}
                           type="button"
@@ -282,7 +274,7 @@ export function UserPermissionEditor() {
                           onClick={() => setEffect(permission.key, option)}
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            {option === "inherit" ? <CircleDashed className="h-3.5 w-3.5" /> : option === "allow" ? <Check className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+                            {option === "allow" ? <Check className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
                             {effectLabel(option)}
                           </span>
                         </button>
@@ -301,15 +293,13 @@ export function UserPermissionEditor() {
 }
 
 function effectLabel(effect: LocalEffect): string {
-  if (effect === "inherit") return "User System default";
   if (effect === "allow") return "Allow";
   return "Deny";
 }
 
 function categoryActionLabel(effect: LocalEffect): string {
-  if (effect === "inherit") return "Set all to User System default";
-  if (effect === "allow") return "Allow all";
-  return "Deny all";
+  if (effect === "allow") return "Set all to Allow";
+  return "Set all to Deny";
 }
 
 function formatSystemRole(role: string): string {
@@ -353,59 +343,29 @@ function getAccessState(permission: PermissionDefinition, effective: Set<string>
   };
 }
 
-function getPreviewEffectivePermissions(
-  definitions: PermissionDefinition[],
-  systemRole: string,
-  rolePermissions: PermissionGrant[],
-  draft: Record<string, LocalEffect>,
-  savedEffective: Set<string>,
-  bootstrapPermissions: Set<string>,
-): Set<string> {
-  const isGlobalSuperUser = systemRole === "owner" || systemRole === "super_admin";
-  const preview = isGlobalSuperUser
-    ? new Set(definitions.map((definition) => definition.key).filter((key) => key !== uomMailSystemPermission))
-    : new Set<string>();
-
-  if (!isGlobalSuperUser) {
-    for (const grant of rolePermissions) {
-      if (grant.key === uomMailSystemPermission) continue;
-      if (grant.effect === "deny") {
-        preview.delete(grant.key);
-        continue;
-      }
-      if (grant.effect === "allow") preview.add(grant.key);
-    }
-
-    if (!rolePermissions.length) {
-      for (const key of savedEffective) {
-        if (key !== uomMailSystemPermission) preview.add(key);
-      }
-    }
-  }
-
-  for (const [key, effect] of Object.entries(draft)) {
-    if (key === uomMailSystemPermission) continue;
-    if (effect === "deny") {
-      preview.delete(key);
-      continue;
-    }
-    if (effect === "allow") preview.add(key);
-  }
-
-  const uomEffect = draft[uomMailSystemPermission] || "inherit";
-  if (uomEffect === "allow" || (uomEffect === "inherit" && bootstrapPermissions.has(uomMailSystemPermission))) {
-    preview.add(uomMailSystemPermission);
-  } else {
-    preview.delete(uomMailSystemPermission);
-  }
-
-  return preview;
+function getPreviewEffectivePermissions(draft: Record<string, LocalEffect>): Set<string> {
+  return new Set(Object.entries(draft).filter(([, effect]) => effect === "allow").map(([key]) => key));
 }
 
-function getSourceLabel(effect: LocalEffect, roleEffect?: PermissionEffect): string {
-  if (effect === "allow") return "Direct allow";
-  if (effect === "deny") return "Direct deny";
-  if (roleEffect === "allow") return "Allowed by User System default";
-  if (roleEffect === "deny") return "Denied by User System default";
-  return "User System default";
+function buildTwoStateDraft(input: {
+  definitions: PermissionDefinition[];
+  permissions: PermissionGrant[];
+  effectivePermissions: string[];
+  bootstrapPermissions?: string[];
+}): Record<string, LocalEffect> {
+  const direct = new Map(input.permissions.map((grant) => [grant.key, grant.effect]));
+  const effective = new Set(input.effectivePermissions);
+  const bootstrap = new Set(input.bootstrapPermissions || []);
+
+  return Object.fromEntries(
+    input.definitions.map((definition) => {
+      const directEffect = direct.get(definition.key);
+      const effect = directEffect === "allow" || directEffect === "deny"
+        ? directEffect
+        : effective.has(definition.key) || bootstrap.has(definition.key)
+          ? "allow"
+          : "deny";
+      return [definition.key, effect];
+    }),
+  );
 }

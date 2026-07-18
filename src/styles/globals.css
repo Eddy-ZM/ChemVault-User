@@ -653,7 +653,7 @@ textarea {
   }
 
   .segmented {
-    @apply inline-grid w-full grid-cols-3 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:w-auto;
+    @apply inline-grid w-full grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:w-auto;
   }
 
   .segment-button {
@@ -667,10 +667,6 @@ textarea {
 
   .segment-active {
     @apply bg-white shadow-sm ring-1;
-  }
-
-  .segment-inherit {
-    @apply text-slate-700 ring-slate-200;
   }
 
   .segment-allow {
