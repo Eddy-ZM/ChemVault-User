@@ -24,6 +24,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
       user: {
         id: user.id,
         email: user.email,
+        name: user.name,
+        avatarUrl: user.avatar_url,
         systemRole: user.system_role,
       },
     });
