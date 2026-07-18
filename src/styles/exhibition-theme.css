@@ -239,6 +239,22 @@ body {
   box-shadow: 0 20px 50px rgba(7, 17, 31, 0.09);
 }
 
+.login-verification-overlay {
+  background: rgba(244, 241, 233, 0.96);
+}
+
+.login-verification-card {
+  border-color: #d8d2c7;
+  border-top-color: #3159e8;
+  background: #fffdf8;
+  box-shadow: 0 28px 70px rgba(7, 17, 31, 0.16);
+}
+
+.login-verification-card .loading-block {
+  border-color: #e1ddd4;
+  background: #faf8f2;
+}
+
 .user-system-footer {
   border-color: rgba(255, 255, 255, 0.12);
   background: #07111f;

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { LogIn } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiClientError } from "../lib/api";
@@ -6,7 +6,7 @@ import { useAuth } from "../lib/auth";
 import { isEmail, required } from "../lib/validators";
 import { BrandLogo } from "../components/BrandLogo";
 import { UserSystemFooter } from "../components/UserSystemFooter";
-import { ButtonSpinner } from "../components/UiPrimitives";
+import { ButtonSpinner, LoadingBlock } from "../components/UiPrimitives";
 import { MailSsoButton } from "../components/MailSsoButton";
 import { OAuthButtonGroup } from "../components/OAuthButtonGroup";
 import { getSafeReturnTo, navigateToReturnTo } from "../lib/returnTo";
@@ -18,15 +18,27 @@ export function Login() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const verificationOverlayRef = useRef<HTMLDivElement>(null);
   const from = getSafeReturnTo(searchParams.get("returnTo") || (location.state as { from?: string } | null)?.from);
   const returnToQuery = `?returnTo=${encodeURIComponent(from)}`;
   const ssoMessage = getSsoMessage(searchParams.get("sso"));
+  const isMailSystemHandoff = from.includes("uom-su-mail-system") || from.includes("mailsys.uomsu.chemvault.science");
 
   useEffect(() => {
     if (!loading && user) {
       navigateToReturnTo(from, navigate);
     }
   }, [from, loading, navigate, user]);
+
+  useEffect(() => {
+    if (!busy) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    verificationOverlayRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [busy]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +57,6 @@ export function Login() {
       navigateToReturnTo(from, navigate);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Login failed.");
-    } finally {
       setBusy(false);
     }
   }
@@ -105,6 +116,32 @@ export function Login() {
         </p>
       </form>
       <UserSystemFooter compact />
+      {busy ? (
+        <div
+          ref={verificationOverlayRef}
+          className="login-verification-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="login-verification-title"
+          aria-describedby="login-verification-description"
+          tabIndex={-1}
+        >
+          <section className="login-verification-card">
+            <BrandLogo compact title="ChemVault User Center" subtitle="Secure authentication" />
+            <div className="login-verification-copy">
+              <span>SECURE SIGN-IN</span>
+              <h2 id="login-verification-title">Verifying your account</h2>
+              <p id="login-verification-description">
+                {isMailSystemHandoff
+                  ? "Signing you in and checking your access to the Student Representative Mail System."
+                  : "Signing you in and preparing access to your requested ChemVault service."}
+              </p>
+            </div>
+            <LoadingBlock label="Checking identity and access permissions..." />
+            <p className="login-verification-note">Keep this window open. You will be redirected automatically.</p>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
