@@ -3,24 +3,34 @@ import type { Env, UserRow } from "./types";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-const handoffLifetimeSeconds = 5 * 60;
+const labHandoffLifetimeSeconds = 5 * 60;
+const uomMailSystemHandoffLifetimeSeconds = 8 * 60 * 60;
+
+export const uomMailSystemAudience = "uom-su-mail-system" as const;
+export const uomMailSystemPermission = "service:uom-su-mail-system:access" as const;
+export type UserSystemHandoffAudience = "chemvault-lab" | typeof uomMailSystemAudience;
 
 export interface UserSystemHandoffPayload {
   sub: string;
-  aud: string;
+  aud: UserSystemHandoffAudience;
   typ: "chemvault-user-handoff";
   iat: number;
   exp: number;
 }
 
-export async function createUserSystemHandoffToken(env: Env, user: UserRow, audience = "chemvault-lab") {
+export async function createUserSystemHandoffToken(
+  env: Env,
+  user: UserRow,
+  audience: UserSystemHandoffAudience = "chemvault-lab",
+) {
+  assertSupportedHandoffAudience(audience);
   const now = Math.floor(Date.now() / 1000);
   const payload: UserSystemHandoffPayload = {
     sub: user.id,
     aud: audience,
     typ: "chemvault-user-handoff",
     iat: now,
-    exp: now + handoffLifetimeSeconds,
+    exp: now + getHandoffLifetimeSeconds(audience),
   };
   const header = { alg: "HS256", typ: "JWT" };
   const unsigned = `${base64UrlJson(header)}.${base64UrlJson(payload)}`;
@@ -28,7 +38,12 @@ export async function createUserSystemHandoffToken(env: Env, user: UserRow, audi
   return `${unsigned}.${signature}`;
 }
 
-export async function verifyUserSystemHandoffToken(env: Env, token: string, expectedAudience = "chemvault-lab") {
+export async function verifyUserSystemHandoffToken(
+  env: Env,
+  token: string,
+  expectedAudience: UserSystemHandoffAudience = "chemvault-lab",
+) {
+  assertSupportedHandoffAudience(expectedAudience);
   const parts = token.split(".");
   if (parts.length !== 3) {
     throw new ApiError("INVALID_SSO_ASSERTION", "Invalid User System handoff token.", 401);
@@ -59,6 +74,53 @@ export async function verifyUserSystemHandoffToken(env: Env, token: string, expe
     throw new ApiError("INVALID_SSO_ASSERTION", "User System handoff token has expired.", 401);
   }
   return payload;
+}
+
+export function parseUserSystemHandoffAudience(value: string | null): UserSystemHandoffAudience {
+  const audience = value || "chemvault-lab";
+  assertSupportedHandoffAudience(audience);
+  return audience;
+}
+
+export function getUserSystemHandoffAudienceForReturnTo(returnTo: string): UserSystemHandoffAudience {
+  let url: URL;
+  try {
+    url = new URL(returnTo);
+  } catch {
+    throw new ApiError("VALIDATION_ERROR", "Unsupported User System handoff destination.", 400);
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const isHttps = url.protocol === "https:";
+  const isUomMailSystemHost =
+    hostname === "mailsys.uomsu.chemvault.science" ||
+    hostname === "uom-su-mail-system.pages.dev" ||
+    hostname.endsWith(".uom-su-mail-system.pages.dev");
+  if (isHttps && isUomMailSystemHost) return uomMailSystemAudience;
+
+  const isLabHost =
+    hostname === "lab.chemvault.science" ||
+    hostname === "chemvault-lab.pages.dev" ||
+    hostname.endsWith(".chemvault-lab.pages.dev");
+  if (isHttps && isLabHost && url.pathname === "/auth/callback") return "chemvault-lab";
+
+  const isLocalLabCallback =
+    (hostname === "localhost" || hostname === "127.0.0.1") &&
+    (url.protocol === "http:" || isHttps) &&
+    url.pathname === "/auth/callback";
+  if (isLocalLabCallback) return "chemvault-lab";
+
+  throw new ApiError("VALIDATION_ERROR", "Unsupported User System handoff destination.", 400);
+}
+
+function assertSupportedHandoffAudience(value: string): asserts value is UserSystemHandoffAudience {
+  if (value !== "chemvault-lab" && value !== uomMailSystemAudience) {
+    throw new ApiError("VALIDATION_ERROR", "Unsupported User System handoff audience.", 400);
+  }
+}
+
+function getHandoffLifetimeSeconds(audience: UserSystemHandoffAudience) {
+  return audience === uomMailSystemAudience ? uomMailSystemHandoffLifetimeSeconds : labHandoffLifetimeSeconds;
 }
 
 function getHandoffSecret(env: Env) {

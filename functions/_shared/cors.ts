@@ -7,6 +7,8 @@ const allowedOrigins = new Set([
   "https://molecule.chemvault.science",
   "https://notif.chemvault.science",
   "https://lab.chemvault.science",
+  "https://mailsys.uomsu.chemvault.science",
+  "https://uom-su-mail-system.pages.dev",
   "https://chemvault.science",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
@@ -20,7 +22,7 @@ export function corsHeaders(request: Request): Headers {
   const headers = new Headers();
   const origin = request.headers.get("origin");
 
-  if (origin && allowedOrigins.has(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     headers.set("Access-Control-Allow-Origin", origin);
     headers.set("Access-Control-Allow-Credentials", "true");
     headers.set("Vary", "Origin");
@@ -31,4 +33,19 @@ export function corsHeaders(request: Request): Headers {
   headers.set("Access-Control-Max-Age", "86400");
 
   return headers;
+}
+
+function isAllowedOrigin(origin: string) {
+  if (allowedOrigins.has(origin)) return true;
+
+  try {
+    const url = new URL(origin);
+    return (
+      url.origin === origin &&
+      url.protocol === "https:" &&
+      url.hostname.endsWith(".uom-su-mail-system.pages.dev")
+    );
+  } catch {
+    return false;
+  }
 }

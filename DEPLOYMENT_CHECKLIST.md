@@ -32,6 +32,7 @@ Target domain: `https://user.chemvault.science`
 - [ ] Wait for Pages custom domain certificate issuance.
 - [ ] Create a production admin account with a real email and strong password.
 - [ ] Apply `db/migrations/008_main_site_admin_permissions.sql` so User Center exposes ChemVault main-site Forms/Leads admin permissions.
+- [x] Apply `db/migrations/011_uom_su_mail_system_permission.sql` so User Center can grant access to the UoM Student Representative Mail System.
 - [ ] Confirm `ziwen.mu@chemvault.science` and `admin@chemvault.science` have the needed main-site admin permissions before disabling the main-site token fallback.
 
 Current deployed URL before custom domain binding:

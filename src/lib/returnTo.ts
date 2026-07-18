@@ -11,6 +11,7 @@ const allowedProductionHosts = new Set([
   "molecule.chemvault.science",
   "notif.chemvault.science",
   "lab.chemvault.science",
+  "mailsys.uomsu.chemvault.science",
   "chemvault.science",
 ]);
 
@@ -21,6 +22,7 @@ const allowedPagesPreviewSuffixes = [
   ".chemvault-app.pages.dev",
   ".chemvault-docs.pages.dev",
   ".chemvault-lab.pages.dev",
+  ".uom-su-mail-system.pages.dev",
 ];
 
 export function getSafeReturnTo(rawValue: string | null | undefined, fallback = "/dashboard"): string {
@@ -58,6 +60,12 @@ export function navigateToReturnTo(returnTo: string, navigate: NavigateFunction)
 function shouldUseUserSystemHandoff(returnTo: string): boolean {
   try {
     const url = new URL(returnTo);
+    const isUomMailSystemHost =
+      url.hostname === "mailsys.uomsu.chemvault.science" ||
+      url.hostname === "uom-su-mail-system.pages.dev" ||
+      url.hostname.endsWith(".uom-su-mail-system.pages.dev");
+    if (isUomMailSystemHost && url.protocol === "https:") return true;
+
     const isLabHost =
       url.hostname === "lab.chemvault.science" ||
       url.hostname === "localhost" ||

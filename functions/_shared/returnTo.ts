@@ -9,6 +9,7 @@ const allowedProductionHosts = new Set([
   "molecule.chemvault.science",
   "notif.chemvault.science",
   "lab.chemvault.science",
+  "mailsys.uomsu.chemvault.science",
   "chemvault.science",
 ]);
 
@@ -19,6 +20,7 @@ const allowedPagesPreviewSuffixes = [
   ".chemvault-app.pages.dev",
   ".chemvault-docs.pages.dev",
   ".chemvault-lab.pages.dev",
+  ".uom-su-mail-system.pages.dev",
 ];
 
 export function sanitizeReturnTo(value?: string | null, fallback = "/dashboard"): string {

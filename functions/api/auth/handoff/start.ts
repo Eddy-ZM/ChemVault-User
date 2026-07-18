@@ -1,5 +1,5 @@
 import { getAuthContext } from "../../../_shared/auth";
-import { createUserSystemHandoffToken } from "../../../_shared/handoff";
+import { createUserSystemHandoffToken, getUserSystemHandoffAudienceForReturnTo } from "../../../_shared/handoff";
 import { handleApi } from "../../../_shared/responses";
 import { sanitizeReturnTo } from "../../../_shared/returnTo";
 import type { Env } from "../../../_shared/types";
@@ -8,6 +8,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
   handleApi(request, async () => {
     const requestUrl = new URL(request.url);
     const returnTo = sanitizeReturnTo(requestUrl.searchParams.get("returnTo"), "/dashboard");
+    const audience = getUserSystemHandoffAudienceForReturnTo(returnTo);
     const context = await getAuthContext(env, request);
 
     if (!context) {
@@ -20,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
     }
 
     const destination = new URL(returnTo, requestUrl.origin);
-    const token = await createUserSystemHandoffToken(env, context.user, "chemvault-lab");
+    const token = await createUserSystemHandoffToken(env, context.user, audience);
 
     destination.searchParams.set("token", token);
     destination.searchParams.set("provider", "chemvault-user");

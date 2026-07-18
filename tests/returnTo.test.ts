@@ -26,6 +26,12 @@ describe("returnTo validation", () => {
     expect(sanitizeReturnTo("https://preview.chemvault-lab.pages.dev/auth/callback")).toBe(
       "https://preview.chemvault-lab.pages.dev/auth/callback",
     );
+    expect(getSafeReturnTo("https://mailsys.uomsu.chemvault.science/announcement/42")).toBe(
+      "https://mailsys.uomsu.chemvault.science/announcement/42",
+    );
+    expect(sanitizeReturnTo("https://uom-su-mail-system.pages.dev/")).toBe(
+      "https://uom-su-mail-system.pages.dev/",
+    );
   });
 
   it("allows localhost development URLs", () => {

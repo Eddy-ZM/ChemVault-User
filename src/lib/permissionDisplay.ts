@@ -109,6 +109,7 @@ const resourceLabels: Record<string, string> = {
   chemvault_molecule: "ChemVault Molecule",
   chemvault_notif: "ChemVault Notif",
   chemvault_user: "User Center",
+  "uom-su-mail-system": "University of Manchester Student Representative Mail System",
   dashboard: "Dashboard",
   docs: "Docs",
   extract: "Extract",

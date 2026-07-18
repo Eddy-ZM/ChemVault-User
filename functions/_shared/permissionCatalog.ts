@@ -55,6 +55,7 @@ export const pageCatalog: PageSeed[] = [
 ];
 
 const servicePermissions = [
+  "service:uom-su-mail-system:access",
   "service:chemvault_main:access",
   "service:chemvault_app:access",
   "service:chemvault_user:access",

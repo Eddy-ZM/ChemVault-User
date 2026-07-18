@@ -245,4 +245,33 @@ describe("permission evaluation", () => {
 
     expect(defaultRolePermissions.admin).toContain("service:chemvault_main_admin:access");
   });
+
+  it("defines and evaluates the UoM Student Representative Mail System access permission", () => {
+    const permissionKey = "service:uom-su-mail-system:access";
+    const definition = permissionSeeds.find((permission) => permission.key === permissionKey);
+
+    expect(definition).toMatchObject({
+      key: permissionKey,
+      category: "service",
+    });
+    expect(defaultRolePermissions.user).not.toContain(permissionKey);
+    expect(canAccessService(baseUser, snapshot(), "uom-su-mail-system")).toEqual({
+      allowed: false,
+      reason: "missing_permission",
+    });
+    expect(
+      canAccessService(
+        baseUser,
+        snapshot({ userPermissions: [{ key: permissionKey, effect: "allow" }] }),
+        "uom-su-mail-system",
+      ),
+    ).toEqual({ allowed: true, reason: "allowed_by_user_permission" });
+    expect(
+      canAccessService(
+        baseUser,
+        snapshot({ userPermissions: [{ key: permissionKey, effect: "deny" }] }),
+        "uom-su-mail-system",
+      ),
+    ).toEqual({ allowed: false, reason: "denied_by_user_permission" });
+  });
 });
