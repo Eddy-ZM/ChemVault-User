@@ -9,7 +9,8 @@ import { useToast } from "../components/Toast";
 
 const roles: UserRole[] = ["free", "pro", "admin"];
 const systemRoles: SystemRole[] = ["user", "staff", "service_admin", "admin", "super_admin", "owner"];
-const statuses: UserStatus[] = ["active", "disabled", "deleted"];
+const statuses: UserStatus[] = ["active", "suspended", "deletion_pending", "disabled", "deleted"];
+const creatableStatuses: UserStatus[] = ["active", "disabled"];
 
 const initialCreateForm = {
   name: "",
@@ -26,6 +27,15 @@ const initialCreateForm = {
   mailboxQuotaMb: 1024,
   aliases: "",
 };
+
+interface DeleteUserResponse {
+  ok: boolean;
+  pending: boolean;
+  deletedUser: { id: string; email: string };
+  lifecycleJobId: string;
+  lifecycleStatus: string;
+  forcedLocalDeletion?: boolean;
+}
 
 export function UserManagement() {
   const { notify } = useToast();
@@ -214,9 +224,25 @@ export function UserManagement() {
   async function deleteUser(user: User) {
     setSavingUserId(user.id);
     try {
-      await apiRequest<{ ok: true; deletedUser: { id: string; email: string } }>(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      const result = await apiRequest<DeleteUserResponse>(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      if (result.pending) {
+        setUsers((current) =>
+          current.map((item) => item.id === user.id ? { ...item, status: "deletion_pending", globalStatus: "deletion_pending" } : item),
+        );
+        notify({
+          title: "Deletion pending",
+          description: "Service cleanup did not finish. The account is blocked; delete it again to remove the local account.",
+          tone: "warning",
+        });
+        setDeleteTarget(null);
+        return;
+      }
       setUsers((current) => current.filter((item) => item.id !== user.id));
-      notify({ title: "User deleted", description: user.email, tone: "warning" });
+      notify({
+        title: result.forcedLocalDeletion ? "Pending user removed" : "User deleted",
+        description: user.email,
+        tone: "warning",
+      });
       setDeleteTarget(null);
     } catch (err) {
       const message = err instanceof ApiClientError ? err.message : "User delete failed.";
@@ -408,7 +434,7 @@ export function UserManagement() {
             <label>
               Status
               <select value={createForm.status} onChange={(event) => updateCreateForm({ status: event.target.value as UserStatus })}>
-                {statuses.filter((status) => status !== "deleted").map((status) => <option key={status} value={status}>{status}</option>)}
+                {creatableStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>
           </div>
@@ -496,9 +522,9 @@ export function UserManagement() {
       </Modal>
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Delete user?"
-        description={deleteTarget ? `This will keep one deletion audit record for ${deleteTarget.email}, revoke sessions, remove provider links, and delete the user account.` : ""}
-        confirmLabel="Delete user"
+        title={deleteTarget && isDeletionPending(deleteTarget) ? "Remove pending user?" : "Delete user?"}
+        description={deleteTarget ? deleteDescription(deleteTarget) : ""}
+        confirmLabel={deleteTarget && isDeletionPending(deleteTarget) ? "Remove user" : "Delete user"}
         tone="danger"
         busy={savingUserId === deleteTarget?.id}
         onCancel={() => setDeleteTarget(null)}
@@ -511,4 +537,15 @@ export function UserManagement() {
 function suggestMailAddress(email: string): string {
   const localPart = email.split("@")[0].replace(/[^a-z0-9._-]/gi, ".").replace(/\.+/g, ".").replace(/^\.|\.$/g, "").toLowerCase();
   return localPart ? `${localPart}@chemvault.science` : "";
+}
+
+function isDeletionPending(user: User): boolean {
+  return user.status === "deletion_pending" || user.globalStatus === "deletion_pending";
+}
+
+function deleteDescription(user: User): string {
+  if (isDeletionPending(user)) {
+    return `This account is already blocked for deletion. This will remove the local account record for ${user.email} even if a remote lifecycle service is still failing.`;
+  }
+  return `This will keep one deletion audit record for ${user.email}, revoke sessions, remove provider links, and delete the user account.`;
 }

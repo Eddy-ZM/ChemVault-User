@@ -29,6 +29,7 @@ export function buildDeletedUserRecord(user: UserRow): DeletedUserRecord {
 export interface DeleteUserResult {
   deletedUser: DeletedUserRecord;
   lifecycleJob: LifecycleRun;
+  forcedLocalDeletion: boolean;
 }
 
 export async function permanentlyDeleteUser(input: {
@@ -37,6 +38,7 @@ export async function permanentlyDeleteUser(input: {
   target: UserRow;
   actorUserId?: string | null;
   action: "self_delete" | "admin_delete";
+  forceLocal?: boolean;
 }): Promise<DeleteUserResult> {
   const deletedUser = buildDeletedUserRecord(input.target);
   await input.env.DB.batch([
@@ -52,7 +54,9 @@ export async function permanentlyDeleteUser(input: {
     actorUserId: input.actorUserId,
     action: "delete",
   });
-  if (lifecycleJob.status !== "completed") {
+  const forcedLocalDeletion = input.action === "admin_delete" && input.forceLocal === true && lifecycleJob.status !== "completed";
+
+  if (lifecycleJob.status !== "completed" && !forcedLocalDeletion) {
     await writeAuditLog({
       env: input.env,
       request: input.request,
@@ -66,7 +70,7 @@ export async function permanentlyDeleteUser(input: {
         services: lifecycleJob.results.map((result) => ({ service: result.service, status: result.status })),
       },
     });
-    return { deletedUser, lifecycleJob };
+    return { deletedUser, lifecycleJob, forcedLocalDeletion: false };
   }
 
   await input.env.DB.prepare(`DELETE FROM audit_logs WHERE actor_user_id = ? OR target_user_id = ?`)
@@ -78,12 +82,16 @@ export async function permanentlyDeleteUser(input: {
     request: input.request,
     actorUserId: input.actorUserId || null,
     targetUserId: input.target.id,
-    action: input.action === "self_delete" ? "user.delete.self" : "user.delete.admin",
+    action: forcedLocalDeletion
+      ? "user.delete.admin.force_local"
+      : input.action === "self_delete"
+        ? "user.delete.self"
+        : "user.delete.admin",
     resourceType: "user",
     resourceId: input.target.id,
     details: {
       lifecycleJobId: lifecycleJob.id,
-      deletionMode: "distributed_hard_delete",
+      deletionMode: forcedLocalDeletion ? "local_hard_delete_after_lifecycle_failure" : "distributed_hard_delete",
       services: lifecycleJob.results.map((result) => ({ service: result.service, status: result.status })),
     },
   });
@@ -99,5 +107,5 @@ export async function permanentlyDeleteUser(input: {
     input.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(input.target.id),
   ]);
 
-  return { deletedUser, lifecycleJob };
+  return { deletedUser, lifecycleJob, forcedLocalDeletion };
 }

@@ -220,23 +220,27 @@ export const onRequestDelete: PagesFunction<Env> = async ({ env, request, params
 
     assertActorCanManageTarget({ actor, target, action: "delete" });
 
-    const { deletedUser, lifecycleJob } = await permanentlyDeleteUser({
+    const forceLocal = target.status === "deletion_pending" || target.global_status === "deletion_pending";
+    const { deletedUser, lifecycleJob, forcedLocalDeletion } = await permanentlyDeleteUser({
       env,
       request,
       actorUserId: actor.id,
       target,
       action: "admin_delete",
+      forceLocal,
     });
+    const deleted = lifecycleJob.status === "completed" || forcedLocalDeletion;
 
     return jsonResponse(
       request,
       {
-        ok: lifecycleJob.status === "completed",
-        pending: lifecycleJob.status !== "completed",
+        ok: deleted,
+        pending: !deleted,
         deletedUser,
         lifecycleJobId: lifecycleJob.id,
         lifecycleStatus: lifecycleJob.status,
+        forcedLocalDeletion,
       },
-      { status: lifecycleJob.status === "completed" ? 200 : 202 },
+      { status: deleted ? 200 : 202 },
     );
   });

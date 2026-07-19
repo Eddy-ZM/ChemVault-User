@@ -28,6 +28,14 @@ interface LifecycleJob {
   completedAt: string | null;
 }
 
+interface DeleteUserResponse {
+  ok: boolean;
+  pending: boolean;
+  lifecycleJobId: string;
+  lifecycleStatus: string;
+  forcedLocalDeletion?: boolean;
+}
+
 export function UserDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -65,12 +73,20 @@ export function UserDetail() {
     if (!detail) return;
     try {
       setDeleting(true);
-      const result = await apiRequest<{ ok: boolean; pending: boolean; lifecycleJobId: string; lifecycleStatus: string }>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
+      const result = await apiRequest<DeleteUserResponse>(`/api/admin/users/${detail.user.id}`, { method: "DELETE" });
       if (result.pending) {
-        notify({ title: "Deletion requires attention", description: "The account is blocked. Retry failed service deletions from this page.", tone: "warning" });
+        notify({
+          title: "Deletion pending",
+          description: "The account is blocked. Retry failed services, or delete again to remove the local account.",
+          tone: "warning",
+        });
         await load();
       } else {
-        notify({ title: "User deleted", description: detail.user.email, tone: "warning" });
+        notify({
+          title: result.forcedLocalDeletion ? "Pending user removed" : "User deleted",
+          description: detail.user.email,
+          tone: "warning",
+        });
         navigate("/admin/users", { replace: true });
       }
     } catch (err) {
@@ -217,9 +233,9 @@ export function UserDetail() {
       </div>
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete this user?"
-        description={`This will keep one deletion audit record for ${detail.user.email}, revoke sessions, remove provider links, and delete the user account.`}
-        confirmLabel="Delete user"
+        title={isDeletionPending(detail.user) ? "Remove pending user?" : "Delete this user?"}
+        description={deleteDescription(detail.user)}
+        confirmLabel={isDeletionPending(detail.user) ? "Remove user" : "Delete user"}
         tone="danger"
         busy={deleting}
         onCancel={() => setConfirmDelete(false)}
@@ -238,4 +254,15 @@ function SummaryList({ title, items }: { title: string; items: string[] }) {
       </div>
     </div>
   );
+}
+
+function isDeletionPending(user: User): boolean {
+  return user.status === "deletion_pending" || user.globalStatus === "deletion_pending";
+}
+
+function deleteDescription(user: User): string {
+  if (isDeletionPending(user)) {
+    return `This account is already blocked for deletion. This will remove the local account record for ${user.email} even if a remote lifecycle service is still failing.`;
+  }
+  return `This will keep one deletion audit record for ${user.email}, revoke sessions, remove provider links, and delete the user account.`;
 }
