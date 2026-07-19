@@ -22,8 +22,13 @@ const sizeClass = {
 
 export function Modal({ open, title, description, onClose, children, footer, size = "md" }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -44,15 +49,18 @@ export function Modal({ open, title, description, onClose, children, footer, siz
 
     const focusInitialControl = () => {
       const autofocusTarget = panel?.querySelector<HTMLElement>("[autofocus]");
+      const firstFormControl = panel?.querySelector<HTMLElement>(
+        "input:not([disabled]),select:not([disabled]),textarea:not([disabled])",
+      );
       const firstFocusable = panel?.querySelector<HTMLElement>(focusableSelector);
-      (autofocusTarget ?? firstFocusable ?? panel)?.focus({ preventScroll: true });
+      (autofocusTarget ?? firstFormControl ?? firstFocusable ?? panel)?.focus({ preventScroll: true });
     };
 
     const animationFrame = window.requestAnimationFrame(focusInitialControl);
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -84,7 +92,7 @@ export function Modal({ open, title, description, onClose, children, footer, siz
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus({ preventScroll: true });
     };
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open) return null;
 
