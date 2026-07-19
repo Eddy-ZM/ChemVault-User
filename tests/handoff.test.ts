@@ -5,6 +5,7 @@ import {
   createUserSystemHandoffToken,
   getUserSystemHandoffAudienceForReturnTo,
   uomMailSystemAudience,
+  uomMailSystemFullAccessPermission,
   uomMailSystemPermission,
   verifyUserSystemHandoffToken,
 } from "../functions/_shared/handoff";
@@ -98,24 +99,28 @@ describe("User System handoff", () => {
     );
   });
 
-  it("returns a live access decision for the UoM permission and rejects other audience/permission pairs", async () => {
-    const env = {
-      JWT_SECRET: "test-secret",
-      DB: createHandoffDb("allow"),
-    } as unknown as Env;
+  it("returns independent live decisions for both UoM permissions and rejects other pairs", async () => {
+    for (const permissionKey of [uomMailSystemPermission, uomMailSystemFullAccessPermission]) {
+      const env = {
+        JWT_SECRET: "test-secret",
+        DB: createHandoffDb("allow", user, permissionKey),
+      } as unknown as Env;
+      const token = await createUserSystemHandoffToken(env, user, uomMailSystemAudience);
+      const request = new Request(
+        `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(permissionKey)}`,
+        { headers: { authorization: `Bearer ${token}`, origin: "https://mailsys.uomsu.chemvault.science" } },
+      );
+      const response = await verifyHandoff(createEventContext(env, request));
+      const body = await response.json() as { handoff: { audience: string }; access: { allowed: boolean; reason: string }; user: { permissions: string[] } };
+
+      expect(response.status).toBe(200);
+      expect(body.handoff.audience).toBe(uomMailSystemAudience);
+      expect(body.access).toEqual({ allowed: true, reason: "allowed_by_user_permission" });
+      expect(body.user.permissions).toContain(permissionKey);
+    }
+
+    const env = { JWT_SECRET: "test-secret", DB: createHandoffDb(null) } as unknown as Env;
     const token = await createUserSystemHandoffToken(env, user, uomMailSystemAudience);
-    const request = new Request(
-      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
-      { headers: { authorization: `Bearer ${token}`, origin: "https://mailsys.uomsu.chemvault.science" } },
-    );
-    const response = await verifyHandoff(createEventContext(env, request));
-    const body = await response.json() as { handoff: { audience: string }; access: { allowed: boolean; reason: string }; user: { permissions: string[] } };
-
-    expect(response.status).toBe(200);
-    expect(body.handoff.audience).toBe(uomMailSystemAudience);
-    expect(body.access).toEqual({ allowed: true, reason: "allowed_by_user_permission" });
-    expect(body.user.permissions).toContain(uomMailSystemPermission);
-
     const invalidResponse = await verifyHandoff(createEventContext(env, new Request(
       `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=service:another:access`,
       { headers: { authorization: `Bearer ${token}` } },
@@ -123,19 +128,21 @@ describe("User System handoff", () => {
     expect(invalidResponse.status).toBe(400);
   });
 
-  it("re-evaluates a UoM deny on every verification request", async () => {
-    const env = {
-      JWT_SECRET: "test-secret",
-      DB: createHandoffDb("deny"),
-    } as unknown as Env;
-    const token = await createUserSystemHandoffToken(env, user, uomMailSystemAudience);
-    const response = await verifyHandoff(createEventContext(env, new Request(
-      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
-      { headers: { authorization: `Bearer ${token}` } },
-    )));
-    const body = await response.json() as { access: { allowed: boolean; reason: string } };
+  it("re-evaluates independent UoM denies on every verification request", async () => {
+    for (const permissionKey of [uomMailSystemPermission, uomMailSystemFullAccessPermission]) {
+      const env = {
+        JWT_SECRET: "test-secret",
+        DB: createHandoffDb("deny", user, permissionKey),
+      } as unknown as Env;
+      const token = await createUserSystemHandoffToken(env, user, uomMailSystemAudience);
+      const response = await verifyHandoff(createEventContext(env, new Request(
+        `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(permissionKey)}`,
+        { headers: { authorization: `Bearer ${token}` } },
+      )));
+      const body = await response.json() as { access: { allowed: boolean; reason: string } };
 
-    expect(body.access).toEqual({ allowed: false, reason: "denied_by_user_permission" });
+      expect(body.access).toEqual({ allowed: false, reason: "denied_by_user_permission" });
+    }
   });
 
   it("applies explicit-only and approved-account bootstrap rules through the live UoM verification endpoint", async () => {
@@ -203,7 +210,11 @@ function createEventContext(env: Env, request: Request) {
   } as unknown as EventContext<Env, string, Record<string, unknown>>;
 }
 
-function createHandoffDb(effect: "allow" | "deny" | null, dbUser: UserRow = user): D1Database {
+function createHandoffDb(
+  effect: "allow" | "deny" | null,
+  dbUser: UserRow = user,
+  permissionKey: string = uomMailSystemPermission,
+): D1Database {
   return {
     prepare(query: string) {
       const statement = {
@@ -217,7 +228,7 @@ function createHandoffDb(effect: "allow" | "deny" | null, dbUser: UserRow = user
         },
         async all() {
           if (query.includes("FROM user_permissions")) {
-            return { results: effect ? [{ key: uomMailSystemPermission, effect }] : [] };
+            return { results: effect ? [{ key: permissionKey, effect }] : [] };
           }
           return { results: [] };
         },

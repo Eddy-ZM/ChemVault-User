@@ -17,6 +17,7 @@ import {
   isUomMailSystemPermission,
   isUomMailSystemServiceKey,
   uomMailSystemPermission,
+  uomMailSystemPermissions,
 } from "./uomMailAccess";
 import { isUserActive } from "./userStatus";
 
@@ -73,8 +74,8 @@ export function evaluatePermission(user: UserRow, snapshot: AccessSnapshot, perm
   if (isInactiveUser(user)) return { allowed: false, reason: "user_inactive" };
   if (isMailRoleManagedPermissionKey(permissionKey)) return { allowed: false, reason: "missing_permission" };
 
-  // This connected service is deliberately explicit-only. Global owner/super-admin
-  // privileges and role-level grants must never make the editor accessible.
+  // These connected-service permissions are deliberately explicit-only. Global
+  // owner/super-admin privileges and role-level grants must never confer them.
   if (isUomMailSystemPermission(permissionKey)) {
     if (snapshot.userPermissions.some((grant) => grant.key === permissionKey && grant.effect === "deny")) {
       return { allowed: false, reason: "denied_by_user_permission" };
@@ -180,14 +181,16 @@ export async function loadAccessSnapshot(db: D1Database, user: UserRow): Promise
 export async function loadEffectivePermissionKeys(db: D1Database, user: UserRow): Promise<string[]> {
   if (isInactiveUser(user)) return [];
   const snapshot = await loadAccessSnapshot(db, user);
-  const hasUomMailSystemAccess = evaluatePermission(user, snapshot, uomMailSystemPermission).allowed;
+  const allowedUomMailSystemPermissions = uomMailSystemPermissions.filter(
+    (permissionKey) => evaluatePermission(user, snapshot, permissionKey).allowed,
+  );
 
   if (isSuperUser(user)) {
     const rows = await db.prepare(`SELECT key FROM permissions ORDER BY key`).all<{ key: string }>();
     const keys = (rows.results || [])
       .map((row) => row.key)
       .filter((key) => !isMailRoleManagedPermissionKey(key) && !isUomMailSystemPermission(key));
-    if (hasUomMailSystemAccess) keys.push(uomMailSystemPermission);
+    keys.push(...allowedUomMailSystemPermissions);
     return keys.sort();
   }
 
@@ -199,7 +202,7 @@ export async function loadEffectivePermissionKeys(db: D1Database, user: UserRow)
     if (grant.effect === "allow" && !isUomMailSystemPermission(grant.key)) keys.add(grant.key);
     if (grant.effect === "deny") keys.delete(grant.key);
   }
-  if (hasUomMailSystemAccess) keys.add(uomMailSystemPermission);
+  for (const permissionKey of allowedUomMailSystemPermissions) keys.add(permissionKey);
   return [...keys].sort();
 }
 

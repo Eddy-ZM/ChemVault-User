@@ -10,7 +10,7 @@ import {
 import { ApiError, handleApi, jsonResponse, readJson } from "../../../../_shared/responses";
 import { randomId } from "../../../../_shared/security";
 import type { Env, PermissionDefinition, PermissionEffect } from "../../../../_shared/types";
-import { isUomMailSystemBootstrapUser, uomMailSystemPermission } from "../../../../_shared/uomMailAccess";
+import { isUomMailSystemBootstrapUser, uomMailSystemPermissions } from "../../../../_shared/uomMailAccess";
 import { validatePermissionEffect } from "../../../../_shared/validators";
 
 function parsePermissionList(input: unknown): { key: string; effect: PermissionEffect }[] {
@@ -47,7 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
       permissions: snapshot.userPermissions,
       rolePermissions: snapshot.rolePermissions,
       effectivePermissions: effective,
-      bootstrapPermissions: isUomMailSystemBootstrapUser(target) ? [uomMailSystemPermission] : [],
+      bootstrapPermissions: isUomMailSystemBootstrapUser(target) ? [...uomMailSystemPermissions] : [],
       definitions: (definitions.results || []).filter((definition) => !isMailRoleManagedPermissionKey(definition.key)),
     });
   });
@@ -101,6 +101,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({ env, request, params 
       permissions: snapshot.userPermissions,
       rolePermissions: snapshot.rolePermissions,
       effectivePermissions,
-      bootstrapPermissions: isUomMailSystemBootstrapUser(target) ? [uomMailSystemPermission] : [],
+      bootstrapPermissions: isUomMailSystemBootstrapUser(target) ? [...uomMailSystemPermissions] : [],
     });
   });

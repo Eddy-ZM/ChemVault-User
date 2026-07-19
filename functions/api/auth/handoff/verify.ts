@@ -2,6 +2,7 @@ import { getUserById, toPublicUser } from "../../../_shared/db";
 import {
   parseUserSystemHandoffAudience,
   uomMailSystemAudience,
+  uomMailSystemFullAccessPermission,
   uomMailSystemPermission,
   verifyUserSystemHandoffToken,
 } from "../../../_shared/handoff";
@@ -26,8 +27,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) =>
 
     const audience = parseUserSystemHandoffAudience(audienceValues[0] || null);
     const permission = permissionValues[0] || null;
-    if (audience === uomMailSystemAudience && permission !== uomMailSystemPermission) {
-      throw new ApiError("VALIDATION_ERROR", `permission must be ${uomMailSystemPermission}.`, 400);
+    const isUomMailSystemPermission =
+      permission === uomMailSystemPermission || permission === uomMailSystemFullAccessPermission;
+    if (audience === uomMailSystemAudience && !isUomMailSystemPermission) {
+      throw new ApiError(
+        "VALIDATION_ERROR",
+        `permission must be ${uomMailSystemPermission} or ${uomMailSystemFullAccessPermission}.`,
+        400,
+      );
     }
     if (audience === "chemvault-lab" && permission) {
       throw new ApiError("VALIDATION_ERROR", "Lab handoff verification does not accept a permission parameter.", 400);

@@ -1,6 +1,6 @@
 import { ApiError } from "./responses";
 import type { Env, UserRow } from "./types";
-export { uomMailSystemPermission } from "./uomMailAccess";
+export { uomMailSystemFullAccessPermission, uomMailSystemPermission } from "./uomMailAccess";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

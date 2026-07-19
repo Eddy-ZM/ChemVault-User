@@ -25,6 +25,11 @@ const categories: Record<string, CategoryDisplay> = {
     description: "Controls whether a user can enter a ChemVault service.",
     order: 10,
   },
+  feature: {
+    label: "Feature Access",
+    description: "Controls protected workspaces and features after service entry is allowed.",
+    order: 15,
+  },
   page: {
     label: "Page Access",
     description: "Controls visible pages and sections inside ChemVault products.",
@@ -159,6 +164,7 @@ const categoryServiceMap: Record<string, string> = {
 };
 
 const uomMailSystemPermission = "service:uom-su-mail-system:access";
+const uomMailSystemFullAccessPermission = "feature:uom-su-mail-system:full_access";
 
 export function getCategoryDisplay(category: string): CategoryDisplay {
   return categories[category] || {
@@ -181,7 +187,7 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
   const actionName = toActionName(extra ? `${action}_${extra}` : action);
   const description = cleanDescription(permission);
 
-  if (permission.key === uomMailSystemPermission) {
+  if (permission.key === uomMailSystemFullAccessPermission) {
     return {
       title: "Access restriction",
       summary: description || "Deny restricts the principal workspace and all archive operations. Allow grants full service access. Public pages remain available in either state.",
@@ -236,6 +242,13 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
 
 export function getPermissionDependency(permission: PermissionDefinition): PermissionDependency | null {
   const [area, resource = ""] = permission.key.split(":");
+  if (permission.key === uomMailSystemFullAccessPermission) {
+    return {
+      serviceKey: "uom-su-mail-system",
+      permissionKey: uomMailSystemPermission,
+      label: toResourceName("uom-su-mail-system"),
+    };
+  }
   if (area === "service") return null;
 
   const serviceKey =
