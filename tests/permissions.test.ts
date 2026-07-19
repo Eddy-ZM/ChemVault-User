@@ -253,6 +253,8 @@ describe("permission evaluation", () => {
 
     expect(definition).toMatchObject({
       key: permissionKey,
+      name: "Access restriction",
+      description: "Deny restricts the principal workspace and all archive operations. Allow grants full service access. Public pages remain available in either state.",
       category: "service",
     });
     for (const permissions of Object.values(defaultRolePermissions)) {
@@ -312,28 +314,30 @@ describe("permission evaluation", () => {
     }
   });
 
-  it("bootstraps only Ziwen for UoM Mail System access and lets an explicit deny win", () => {
+  it("bootstraps only the approved ChemVault accounts for UoM Mail System access and lets an explicit deny win", () => {
     const permissionKey = "service:uom-su-mail-system:access";
-    const ziwen = { ...baseUser, email: "  Ziwen.Mu@ChemVault.Science ", system_role: "user" as const };
+    for (const email of ["  Ziwen.Mu@ChemVault.Science ", " TEST@CHEMVAULT.SCIENCE "]) {
+      const approvedUser = { ...baseUser, email, system_role: "user" as const };
 
-    expect(evaluatePermission(ziwen, snapshot(), permissionKey)).toEqual({
-      allowed: true,
-      reason: "allowed_by_bootstrap_identity",
-    });
-    expect(
-      evaluatePermission(
-        ziwen,
-        snapshot({ rolePermissions: [{ key: permissionKey, effect: "deny" }] }),
-        permissionKey,
-      ),
-    ).toEqual({ allowed: true, reason: "allowed_by_bootstrap_identity" });
-    expect(
-      evaluatePermission(
-        ziwen,
-        snapshot({ userPermissions: [{ key: permissionKey, effect: "deny" }] }),
-        permissionKey,
-      ),
-    ).toEqual({ allowed: false, reason: "denied_by_user_permission" });
+      expect(evaluatePermission(approvedUser, snapshot(), permissionKey)).toEqual({
+        allowed: true,
+        reason: "allowed_by_bootstrap_identity",
+      });
+      expect(
+        evaluatePermission(
+          approvedUser,
+          snapshot({ rolePermissions: [{ key: permissionKey, effect: "deny" }] }),
+          permissionKey,
+        ),
+      ).toEqual({ allowed: true, reason: "allowed_by_bootstrap_identity" });
+      expect(
+        evaluatePermission(
+          approvedUser,
+          snapshot({ userPermissions: [{ key: permissionKey, effect: "deny" }] }),
+          permissionKey,
+        ),
+      ).toEqual({ allowed: false, reason: "denied_by_user_permission" });
+    }
   });
 
   it("returns an effective UoM permission only for bootstrap or explicit user access", async () => {
@@ -362,6 +366,12 @@ describe("permission evaluation", () => {
       loadEffectivePermissionKeys(permissionDb({ definitions: allDefinitions }), {
         ...baseUser,
         email: "ziwen.mu@chemvault.science",
+      }),
+    ).resolves.toContain(permissionKey);
+    await expect(
+      loadEffectivePermissionKeys(permissionDb({ definitions: allDefinitions }), {
+        ...baseUser,
+        email: "test@chemvault.science",
       }),
     ).resolves.toContain(permissionKey);
     await expect(

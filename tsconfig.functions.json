@@ -13,5 +13,5 @@
     "noEmit": true
   },
   "include": ["functions", "tests"],
-  "exclude": ["tests/returnTo.test.ts"]
+  "exclude": ["tests/returnTo.test.ts", "tests/permission-display.test.ts"]
 }

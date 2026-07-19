@@ -158,6 +158,8 @@ const categoryServiceMap: Record<string, string> = {
   model: "chemvault_model",
 };
 
+const uomMailSystemPermission = "service:uom-su-mail-system:access";
+
 export function getCategoryDisplay(category: string): CategoryDisplay {
   return categories[category] || {
     label: titleCase(category),
@@ -178,6 +180,15 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
   const resourceName = toResourceName(resource || area);
   const actionName = toActionName(extra ? `${action}_${extra}` : action);
   const description = cleanDescription(permission);
+
+  if (permission.key === uomMailSystemPermission) {
+    return {
+      title: "Access restriction",
+      summary: description || "Deny restricts the principal workspace and all archive operations. Allow grants full service access. Public pages remain available in either state.",
+      categoryLabel: category.label,
+      categoryDescription: category.description,
+    };
+  }
 
   if (area === "service") {
     return {

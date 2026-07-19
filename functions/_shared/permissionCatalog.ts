@@ -152,11 +152,15 @@ export const permissionSeeds: PermissionSeed[] = [
   ...apiPermissions,
 ].map((key) => ({
   key,
-  name: key
-    .split(":")
-    .map((part) => part.replace(/_/g, " "))
-    .join(" / "),
-  description: `Allows ${key}.`,
+  name: key === uomMailSystemPermission
+    ? "Access restriction"
+    : key
+      .split(":")
+      .map((part) => part.replace(/_/g, " "))
+      .join(" / "),
+  description: key === uomMailSystemPermission
+    ? "Deny restricts the principal workspace and all archive operations. Allow grants full service access. Public pages remain available in either state."
+    : `Allows ${key}.`,
   category: categoryByPrefix[key.split(":")[0]] || "custom",
 }));
 

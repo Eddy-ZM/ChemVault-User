@@ -138,7 +138,7 @@ describe("User System handoff", () => {
     expect(body.access).toEqual({ allowed: false, reason: "denied_by_user_permission" });
   });
 
-  it("applies explicit-only and Ziwen bootstrap rules through the live UoM verification endpoint", async () => {
+  it("applies explicit-only and approved-account bootstrap rules through the live UoM verification endpoint", async () => {
     const owner = { ...user, email: "owner@example.com", system_role: "owner" as const };
     const ownerEnv = {
       JWT_SECRET: "test-secret",
@@ -154,20 +154,22 @@ describe("User System handoff", () => {
     expect(ownerBody.access).toEqual({ allowed: false, reason: "missing_permission" });
     expect(ownerBody.user.permissions).not.toContain(uomMailSystemPermission);
 
-    const ziwen = { ...user, email: "ziwen.mu@chemvault.science" };
-    const ziwenEnv = {
-      JWT_SECRET: "test-secret",
-      DB: createHandoffDb(null, ziwen),
-    } as unknown as Env;
-    const ziwenToken = await createUserSystemHandoffToken(ziwenEnv, ziwen, uomMailSystemAudience);
-    const ziwenResponse = await verifyHandoff(createEventContext(ziwenEnv, new Request(
-      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
-      { headers: { authorization: `Bearer ${ziwenToken}` } },
-    )));
-    const ziwenBody = await ziwenResponse.json() as { access: { allowed: boolean; reason: string }; user: { permissions: string[] } };
+    for (const email of ["ziwen.mu@chemvault.science", "test@chemvault.science"]) {
+      const approvedUser = { ...user, email };
+      const approvedEnv = {
+        JWT_SECRET: "test-secret",
+        DB: createHandoffDb(null, approvedUser),
+      } as unknown as Env;
+      const approvedToken = await createUserSystemHandoffToken(approvedEnv, approvedUser, uomMailSystemAudience);
+      const approvedResponse = await verifyHandoff(createEventContext(approvedEnv, new Request(
+        `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
+        { headers: { authorization: `Bearer ${approvedToken}` } },
+      )));
+      const approvedBody = await approvedResponse.json() as { access: { allowed: boolean; reason: string }; user: { permissions: string[] } };
 
-    expect(ziwenBody.access).toEqual({ allowed: true, reason: "allowed_by_bootstrap_identity" });
-    expect(ziwenBody.user.permissions).toContain(uomMailSystemPermission);
+      expect(approvedBody.access).toEqual({ allowed: true, reason: "allowed_by_bootstrap_identity" });
+      expect(approvedBody.user.permissions).toContain(uomMailSystemPermission);
+    }
   });
 
   it("keeps the Lab verification response compatible when no permission is requested", async () => {
