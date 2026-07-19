@@ -262,7 +262,7 @@ function isDeletionPending(user: User): boolean {
 
 function deleteDescription(user: User): string {
   if (isDeletionPending(user)) {
-    return `This account is already blocked for deletion. This will remove the local account record for ${user.email} even if a remote lifecycle service is still failing.`;
+    return `This account is already blocked for deletion. This will remove the local account record for ${user.email} even if a remote lifecycle service is still failing now.`;
   }
   return `This will keep one deletion audit record for ${user.email}, revoke sessions, remove provider links, and delete the user account.`;
 }
