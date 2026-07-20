@@ -165,7 +165,6 @@ function getSsoMessage(reason: string | null): string {
             : "OAuth";
   const code = rest.join("_");
 
-  if (provider === "microsoft") return "Microsoft sign-in is temporarily unavailable due to Microsoft-side limitations.";
   if (code === "not_configured") return `${providerName} login is wired in User Center, but provider credentials are not configured yet.`;
   if (code === "invalid_state") return `${providerName} login was blocked because the OAuth state was invalid or expired. Please try again.`;
   if (code === "missing_email") return `${providerName} did not provide an email address. Please use another sign-in method.`;

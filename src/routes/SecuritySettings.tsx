@@ -41,7 +41,7 @@ const accountProviders: Array<{
   {
     key: "microsoft",
     label: "Microsoft",
-    description: "Temporarily unavailable due to Microsoft-side limitations.",
+    description: "Use Microsoft identity platform sign-in with openid, email, profile, and User.Read scopes.",
   },
 ];
 
@@ -281,9 +281,6 @@ export function SecuritySettings() {
                         mode="link"
                         returnTo={`/settings/security?sso=${provider.key}_linked`}
                         label={`Bind ${provider.label}`}
-                        disabledReason={
-                          provider.key === "microsoft" ? "Temporarily unavailable due to Microsoft-side limitations." : undefined
-                        }
                       />
                     )}
                   </div>
