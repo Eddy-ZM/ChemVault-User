@@ -32,10 +32,10 @@ EXTRACT_LIFECYCLE_URL = "https://api.chemvault.science/internal/lifecycle"
 # APPLE_KEY_ID = "YOUR_APPLE_KEY_ID"
 # APPLE_REDIRECT_URI = "https://user.chemvault.science/api/auth/sso/apple/callback"
 # Optional third-party OAuth providers:
-# AUTH_URL = "https://user.chemvault.science"
+AUTH_URL = "https://user.chemvault.science"
 # GOOGLE_CLIENT_ID = "YOUR_GOOGLE_WEB_CLIENT_ID"
-# MICROSOFT_CLIENT_ID = "YOUR_MICROSOFT_APPLICATION_CLIENT_ID"
-# MICROSOFT_TENANT_ID = "common"
+MICROSOFT_CLIENT_ID = "7dd41e6a-b2be-491b-b630-abef9bfdd23c"
+MICROSOFT_TENANT_ID = "common"
 # GITHUB_CLIENT_ID = "YOUR_GITHUB_OAUTH_APP_CLIENT_ID"
 # Optional after creating a Cloudflare Turnstile widget for user.chemvault.science:
 # TURNSTILE_SITE_KEY = "0x4AAAA..."

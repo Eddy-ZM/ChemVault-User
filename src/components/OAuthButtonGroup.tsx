@@ -2,8 +2,6 @@ import { Link } from "react-router-dom";
 import { AppleSignInButton } from "./AppleSignInButton";
 import { OAuthSignInButton } from "./OAuthSignInButton";
 
-const microsoftUnavailableReason = "Temporarily unavailable due to Microsoft-side limitations.";
-
 export function OAuthButtonGroup({ returnTo = "/dashboard" }: { returnTo?: string }) {
   return (
     <>
@@ -11,7 +9,7 @@ export function OAuthButtonGroup({ returnTo = "/dashboard" }: { returnTo?: strin
         <AppleSignInButton returnTo={returnTo} label="Continue with Apple Account" />
         <OAuthSignInButton provider="google" returnTo={returnTo} />
         <OAuthSignInButton provider="github" returnTo={returnTo} />
-        <OAuthSignInButton provider="microsoft" returnTo={returnTo} disabledReason={microsoftUnavailableReason} />
+        <OAuthSignInButton provider="microsoft" returnTo={returnTo} />
       </div>
       <p className="text-xs leading-5 text-slate-500">
         By continuing with Apple, Google, GitHub, Microsoft, or another connected sign-in provider, you agree to the{" "}
