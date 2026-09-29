@@ -16,12 +16,14 @@ import {
   isUomMailSystemBootstrapUser,
   isUomMailSystemPermission,
   isUomMailSystemServiceKey,
+  uomMailSystemFullAccessPermission,
   uomMailSystemPermission,
   uomMailSystemPermissions,
 } from "./uomMailAccess";
 import { isUserActive } from "./userStatus";
 
 export type AccessReason =
+  | "allowed_by_default"
   | "allowed_by_owner"
   | "allowed_by_super_admin"
   | "allowed_by_user_permission"
@@ -74,14 +76,18 @@ export function evaluatePermission(user: UserRow, snapshot: AccessSnapshot, perm
   if (isInactiveUser(user)) return { allowed: false, reason: "user_inactive" };
   if (isMailRoleManagedPermissionKey(permissionKey)) return { allowed: false, reason: "missing_permission" };
 
-  // These connected-service permissions are deliberately explicit-only. Global
-  // owner/super-admin privileges and role-level grants must never confer them.
+  // Service entry remains explicit-only. Full feature access is available by
+  // default once the consuming service has separately confirmed entry access;
+  // an explicit per-user deny remains authoritative.
   if (isUomMailSystemPermission(permissionKey)) {
     if (snapshot.userPermissions.some((grant) => grant.key === permissionKey && grant.effect === "deny")) {
       return { allowed: false, reason: "denied_by_user_permission" };
     }
     if (snapshot.userPermissions.some((grant) => grant.key === permissionKey && grant.effect === "allow")) {
       return { allowed: true, reason: "allowed_by_user_permission" };
+    }
+    if (permissionKey === uomMailSystemFullAccessPermission) {
+      return { allowed: true, reason: "allowed_by_default" };
     }
     if (isUomMailSystemBootstrapUser(user)) {
       return { allowed: true, reason: "allowed_by_bootstrap_identity" };

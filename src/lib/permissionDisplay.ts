@@ -189,8 +189,8 @@ export function getPermissionDisplay(permission: PermissionDefinition): Permissi
 
   if (permission.key === uomMailSystemFullAccessPermission) {
     return {
-      title: "Access restriction",
-      summary: description || "Deny restricts the principal workspace and all archive operations. Allow grants full service access. Public pages remain available in either state.",
+      title: "Full service access",
+      summary: description || "Available by default after service entry is allowed. Deny blocks the principal workspace and archive operations; Allow restores full service access.",
       categoryLabel: category.label,
       categoryDescription: category.description,
     };

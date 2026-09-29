@@ -162,7 +162,7 @@ export const permissionSeeds: PermissionSeed[] = [
   name: key === uomMailSystemPermission
     ? "University of Manchester Student Representative Mail System"
     : key === uomMailSystemFullAccessPermission
-      ? "Access restriction"
+      ? "Full service access"
       : key
         .split(":")
         .map((part) => part.replace(/_/g, " "))
@@ -170,7 +170,7 @@ export const permissionSeeds: PermissionSeed[] = [
   description: key === uomMailSystemPermission
     ? "Allows the user to access the University of Manchester Student Representative Mail System and create official Student Representative announcements."
     : key === uomMailSystemFullAccessPermission
-      ? "Deny restricts the principal workspace and all archive operations. Allow grants full service access. Public pages remain available in either state."
+      ? "Available by default after service entry is allowed. Deny blocks the principal workspace and archive operations; Allow restores full service access."
       : `Allows ${key}.`,
   category: categoryByPrefix[key.split(":")[0]] || "custom",
 }));

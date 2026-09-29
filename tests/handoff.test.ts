@@ -145,6 +145,32 @@ describe("User System handoff", () => {
     }
   });
 
+  it("opens full feature access by default without opening service entry", async () => {
+    const env = {
+      JWT_SECRET: "test-secret",
+      DB: createHandoffDb(null, user),
+    } as unknown as Env;
+    const token = await createUserSystemHandoffToken(env, user, uomMailSystemAudience);
+
+    const entryResponse = await verifyHandoff(createEventContext(env, new Request(
+      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemPermission)}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    )));
+    const entryBody = await entryResponse.json() as { access: { allowed: boolean; reason: string } };
+    expect(entryBody.access).toEqual({ allowed: false, reason: "missing_permission" });
+
+    const contentResponse = await verifyHandoff(createEventContext(env, new Request(
+      `https://user.chemvault.science/api/auth/handoff/verify?audience=${uomMailSystemAudience}&permission=${encodeURIComponent(uomMailSystemFullAccessPermission)}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    )));
+    const contentBody = await contentResponse.json() as {
+      access: { allowed: boolean; reason: string };
+      user: { permissions: string[] };
+    };
+    expect(contentBody.access).toEqual({ allowed: true, reason: "allowed_by_default" });
+    expect(contentBody.user.permissions).toContain(uomMailSystemFullAccessPermission);
+  });
+
   it("applies explicit-only and approved-account bootstrap rules through the live UoM verification endpoint", async () => {
     const owner = { ...user, email: "owner@example.com", system_role: "owner" as const };
     const ownerEnv = {
